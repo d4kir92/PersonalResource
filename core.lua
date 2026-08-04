@@ -32,7 +32,6 @@ local powerRightText = powerBar:CreateFontString(nil, "OVERLAY", "GameFontNormal
 powerRightText:SetPoint("RIGHT", powerBar, "RIGHT", -2, 0)
 powerRightText:SetJustifyH("RIGHT")
 function PersonalResource:UpdateHealth()
-    print("UPDATE", DISPLAY_MODE)
     local unit = "player"
     if UnitExists(unit) and UnitIsConnected(unit) then
         local hp = UnitHealth(unit)
@@ -42,7 +41,7 @@ function PersonalResource:UpdateHealth()
         local percent = math.floor((hp / maxHP) * 100)
         if DISPLAY_MODE == "NUMERIC" then
             hpLeftText:SetText("")
-            hpCenterText:SetText(string.format("%d / %d", hp, maxHP))
+            hpCenterText:SetText(string.format("%d", hp))
             hpRightText:SetText("")
         elseif DISPLAY_MODE == "PERCENT" then
             hpLeftText:SetText("")
@@ -51,11 +50,11 @@ function PersonalResource:UpdateHealth()
         elseif DISPLAY_MODE == "BOTH" then
             hpLeftText:SetText(string.format("%d%%", percent))
             hpCenterText:SetText("")
-            hpRightText:SetText(string.format("%d / %d", hp, maxHP))
+            hpRightText:SetText(string.format("%d", hp))
         else
             hpLeftText:SetText(string.format("%d%%", percent))
             hpCenterText:SetText("")
-            hpRightText:SetText(string.format("%d / %d", hp, maxHP))
+            hpRightText:SetText(string.format("%d", hp))
         end
     end
 end
@@ -70,7 +69,7 @@ function PersonalResource:UpdatePower()
         local percent = math.floor((power / maxPower) * 100)
         if DISPLAY_MODE == "NUMERIC" then
             powerLeftText:SetText("")
-            powerCenterText:SetText(string.format("%d / %d", power, maxPower))
+            powerCenterText:SetText(string.format("%d", power))
             powerRightText:SetText("")
         elseif DISPLAY_MODE == "PERCENT" then
             powerLeftText:SetText("")
@@ -79,11 +78,11 @@ function PersonalResource:UpdatePower()
         elseif DISPLAY_MODE == "BOTH" then
             powerLeftText:SetText(string.format("%d%%", percent))
             powerCenterText:SetText("")
-            powerRightText:SetText(string.format("%d / %d", power, maxPower))
+            powerRightText:SetText(string.format("%d", power))
         else
             powerLeftText:SetText(string.format("%d%%", percent))
             powerCenterText:SetText("")
-            powerRightText:SetText(string.format("%d / %d", power, maxPower))
+            powerRightText:SetText(string.format("%d", power))
         end
     end
 end
@@ -107,4 +106,11 @@ powerFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:Upda
 powerFrame:RegisterEvent("UNIT_POWER_UPDATE")
 powerFrame:RegisterEvent("UNIT_MAXPOWER")
 powerFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
-PersonalResource:OnDisplayModeChanged()
+local initFrame = CreateFrame("Frame")
+initFrame:SetScript("OnEvent", function(self, event, ...)
+    PersonalResource:SetAddonOutput("PersonalResource", 136075)
+    PersonalResource:OnDisplayModeChanged()
+    PersonalResource:MSG("INIT")
+end)
+
+initFrame:RegisterEvent("PLAYER_LOGIN")

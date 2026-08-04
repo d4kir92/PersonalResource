@@ -1,6 +1,6 @@
 ## Interface: 11509
 ## Version: 0.1.0
-## Title: PersonalResource |T133741:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
+## Title: PersonalResource |T136075:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
 ## Notes: Show Personal Resource Info
 ## Notes-deDE: Zeigt die persönlichen Resourcen an
 ## Notes-ruRU: Show Personal Resource Info
@@ -12,8 +12,17 @@
 ## SavedVariablesPerCharacter: PersonalResourceC
 ## X-Curse-Project-ID: 1596644
 ## X-Wago-ID: L6J9VWNv
-## IconTexture: 133741
+## IconTexture: 136075
 
+libs\D4Lib\D4Lib.xml
 
+locale\enUS.lua
+locale\deDE.lua
+locale\esES.lua
+locale\frFR.lua
+locale\itIT.lua
+locale\ptBR.lua
+locale\ruRU.lua
+locale\zhCN.lua
 
 core.lua
