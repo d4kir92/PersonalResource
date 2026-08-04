@@ -3,6 +3,21 @@ local DISPLAY_MODE = GetCVar("statusText") or "BOTH"
 local frame = CreateFrame("Frame", "PersonalResourceFrame", UIParent)
 frame:SetSize(200, 100)
 frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
+frame:SetMovable(true)
+frame:EnableMouse(true)
+frame:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then
+        self:StartMoving()
+    end
+end)
+frame:SetScript("OnMouseUp", function(self, button)
+    if button == "LeftButton" then
+        self:StopMovingOrSizing()
+        -- Save the position
+        local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint()
+        PersonalResourceFramePosition = {point, relativeTo, relativePoint, xOfs, yOfs}
+    end
+end)
 local hpBar = CreateFrame("StatusBar", "PersonalResourceHPBar", frame)
 hpBar:SetSize(200, 20)
 hpBar:SetPoint("TOP", frame, "TOP", 0, 0)
@@ -126,6 +141,12 @@ initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
     PersonalResource:SetVersion(136075, "0.1.2")
     PersonalResource:OnDisplayModeChanged()
+
+    -- Restore frame position if saved
+    if PersonalResourceFramePosition then
+        local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceFramePosition)
+        frame:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
+    end
 end)
 
 PersonalResource:RegisterEvent(initFrame, "PLAYER_LOGIN")
