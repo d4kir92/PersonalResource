@@ -9,8 +9,7 @@ frame:SetScript("OnMouseDown", function(self, button) if button == "LeftButton" 
 frame:SetScript("OnMouseUp", function(self, button)
     if button == "LeftButton" then
         self:StopMovingOrSizing()
-        -- Save the position
-        local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint()
+        local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
         if not PersonalResourceG then PersonalResourceG = {} end
         if not PersonalResourceG["mainFrame"] then PersonalResourceG["mainFrame"] = {} end
         PersonalResourceG["mainFrame"]["position"] = {point, relativePoint, xOfs, yOfs}
@@ -140,7 +139,6 @@ initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
     PersonalResource:SetVersion(136075, "0.1.3")
     PersonalResource:OnDisplayModeChanged()
-    -- Restore frame position if saved
     if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
         local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])
         frame:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
