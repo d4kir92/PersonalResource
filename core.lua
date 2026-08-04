@@ -2,7 +2,7 @@ local _, PersonalResource = ...
 local DISPLAY_MODE = GetCVar("statusText") or "BOTH"
 local frame = CreateFrame("Frame", "PersonalResourceFrame", UIParent)
 frame:SetSize(200, 100)
-frame:SetPoint("CENTER", UIParent, "CENTER", 0, -100)
+frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
 local hpBar = CreateFrame("StatusBar", "PersonalResourceHPBar", frame)
 hpBar:SetSize(200, 20)
 hpBar:SetPoint("TOP", frame, "TOP", 0, 0)
@@ -84,12 +84,27 @@ function PersonalResource:UpdatePower()
             powerCenterText:SetText("")
             powerRightText:SetText(string.format("%d", power))
         end
+
+        -- Change color based on power type
+        local powerType = UnitPowerType(unit)
+        if PowerBarColor and PowerBarColor[powerType] then
+            -- Use the PowerBarColor table to get the color for this power type
+            local color = PowerBarColor[powerType]
+            powerBar:SetStatusBarColor(color.r, color.g, color.b, color.a or 1.0)
+        else
+            -- Default color if no specific color defined for this power type
+            powerBar:SetStatusBarColor(0.0, 0.3, 1.0, 1.0) -- Blue
+        end
     end
 end
 
 function PersonalResource:OnDisplayModeChanged()
     DISPLAY_MODE = GetCVar("statusText") or "BOTH"
     PersonalResource:UpdateHealth()
+    PersonalResource:UpdatePower()
+end
+
+function PersonalResource:OnShapeshiftFormChanged()
     PersonalResource:UpdatePower()
 end
 
@@ -100,16 +115,14 @@ local healthFrame = CreateFrame("Frame")
 healthFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateHealth() end)
 healthFrame:RegisterEvent("UNIT_HEALTH")
 healthFrame:RegisterEvent("UNIT_MAXHEALTH")
-healthFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 local powerFrame = CreateFrame("Frame")
-powerFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdatePower() end)
+powerFrame:SetScript("OnEvent", function(self, event, ...) if event == "UNIT_POWER_UPDATE" or event == "UNIT_MAXPOWER" or event == "PLAYER_TARGET_CHANGED" then PersonalResource:UpdatePower() end end)
 powerFrame:RegisterEvent("UNIT_POWER_UPDATE")
 powerFrame:RegisterEvent("UNIT_MAXPOWER")
-powerFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.1.0")
+    PersonalResource:SetVersion(136075, "0.1.1")
     PersonalResource:OnDisplayModeChanged()
     PersonalResource:MSG("INIT")
 end)
