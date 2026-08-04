@@ -1,0 +1,3 @@
+-- zhCN
+local _, PersonalResource = ...
+PersonalResource:AddTrans("zhCN", "LID_GENERAL", "General")

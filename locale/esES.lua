@@ -1,0 +1,3 @@
+-- esES
+local _, PersonalResource = ...
+PersonalResource:AddTrans("esES", "LID_GENERAL", "General")

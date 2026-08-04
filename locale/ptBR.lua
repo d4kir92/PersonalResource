@@ -1,0 +1,3 @@
+-- ptBR
+local _, PersonalResource = ...
+PersonalResource:AddTrans("ptBR", "LID_GENERAL", "General")

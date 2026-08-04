@@ -1,0 +1,3 @@
+-- itIT
+local _, PersonalResource = ...
+PersonalResource:AddTrans("itIT", "LID_GENERAL", "General")

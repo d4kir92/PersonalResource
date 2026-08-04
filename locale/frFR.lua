@@ -1,0 +1,3 @@
+-- frFR
+local _, PersonalResource = ...
+PersonalResource:AddTrans("frFR", "LID_GENERAL", "General")
