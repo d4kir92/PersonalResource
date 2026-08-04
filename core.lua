@@ -5,19 +5,18 @@ frame:SetSize(200, 100)
 frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
 frame:SetMovable(true)
 frame:EnableMouse(true)
-frame:SetScript("OnMouseDown", function(self, button)
-    if button == "LeftButton" then
-        self:StartMoving()
-    end
-end)
+frame:SetScript("OnMouseDown", function(self, button) if button == "LeftButton" then self:StartMoving() end end)
 frame:SetScript("OnMouseUp", function(self, button)
     if button == "LeftButton" then
         self:StopMovingOrSizing()
         -- Save the position
         local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint()
-        PersonalResourceFramePosition = {point, relativeTo, relativePoint, xOfs, yOfs}
+        if not PersonalResourceG then PersonalResourceG = {} end
+        if not PersonalResourceG["mainFrame"] then PersonalResourceG["mainFrame"] = {} end
+        PersonalResourceG["mainFrame"]["position"] = {point, relativePoint, xOfs, yOfs}
     end
 end)
+
 local hpBar = CreateFrame("StatusBar", "PersonalResourceHPBar", frame)
 hpBar:SetSize(200, 20)
 hpBar:SetPoint("TOP", frame, "TOP", 0, 0)
@@ -139,12 +138,11 @@ powerTypFrame:RegisterEvent("UNIT_POWER_UPDATE")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.1.2")
+    PersonalResource:SetVersion(136075, "0.1.3")
     PersonalResource:OnDisplayModeChanged()
-
     -- Restore frame position if saved
-    if PersonalResourceFramePosition then
-        local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceFramePosition)
+    if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
+        local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])
         frame:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
     end
 end)
