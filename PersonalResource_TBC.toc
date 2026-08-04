@@ -10,8 +10,8 @@
 ## DefaultState: enabled
 ## SavedVariables: PersonalResourceG
 ## SavedVariablesPerCharacter: PersonalResourceC
-## X-Curse-Project-ID: 1596644
-## X-Wago-ID: L6J9VWNv
+## X-Curse-Project-ID: 1638833
+## X-Wago-ID: O67D2jK3
 ## IconTexture: 136075
 
 libs\D4Lib\D4Lib.xml
