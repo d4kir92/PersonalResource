@@ -1,7 +1,7 @@
 local _, PersonalResource = ...
 local oldPowerType = nil
 local oldShapeshift = nil
-local DISPLAY_MODE = GetCVar("statusText") or "BOTH"
+local DISPLAY_MODE = GetCVar("statusTextDisplay") or "BOTH"
 local frame = CreateFrame("Frame", "PersonalResourceFrame", UIParent)
 frame:SetSize(200, 100)
 frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
@@ -70,7 +70,7 @@ function PersonalResource:UpdateHealth()
         hpBar:SetStatusBarColor(classColor.r, classColor.g, classColor.b, 1.0)
         if DISPLAY_MODE == "NUMERIC" then
             hpLeftText:SetText("")
-            hpCenterText:SetText(string.format("%d", hp))
+            hpCenterText:SetText(string.format("%d / %d", hp, maxHP))
             hpRightText:SetText("")
         elseif DISPLAY_MODE == "PERCENT" then
             hpLeftText:SetText("")
@@ -98,7 +98,7 @@ function PersonalResource:UpdatePower()
         local percent = math.floor((power / maxPower) * 100)
         if DISPLAY_MODE == "NUMERIC" then
             powerLeftText:SetText("")
-            powerCenterText:SetText(string.format("%d", power))
+            powerCenterText:SetText(string.format("%d / %d", power, maxPower))
             powerRightText:SetText("")
         elseif DISPLAY_MODE == "PERCENT" then
             powerLeftText:SetText("")
@@ -156,14 +156,14 @@ function PersonalResource:UpdatePowerType()
 end
 
 function PersonalResource:OnDisplayModeChanged()
-    DISPLAY_MODE = GetCVar("statusText") or "BOTH"
+    DISPLAY_MODE = GetCVar("statusTextDisplay") or "BOTH"
     PersonalResource:UpdateHealth()
     PersonalResource:UpdatePower()
     PersonalResource:UpdatePowerType()
 end
 
 local cvarFrame = CreateFrame("Frame")
-cvarFrame:SetScript("OnEvent", function(self, event, ...) if event == "CVAR_UPDATE" and arg1 == "statusText" then PersonalResource:OnDisplayModeChanged() end end)
+cvarFrame:SetScript("OnEvent", function(self, event, arg1) if event == "CVAR_UPDATE" and arg1 == "statusTextDisplay" then PersonalResource:OnDisplayModeChanged() end end)
 PersonalResource:RegisterEvent(cvarFrame, "CVAR_UPDATE")
 local healthFrame = CreateFrame("Frame")
 healthFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateHealth() end)
@@ -195,7 +195,7 @@ PersonalResource:RegisterEvent(shapeshiftFrame, "UPDATE_SHAPESHIFT_FORM")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.1.5")
+    PersonalResource:SetVersion(136075, "0.1.6")
     PersonalResource:OnDisplayModeChanged()
     if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
         local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])
