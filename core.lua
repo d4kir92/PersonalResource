@@ -16,34 +16,21 @@ frame:SetScript("OnMouseUp", function(self, button)
     end
 end)
 
-local hpBar = CreateFrame("StatusBar", "PersonalResourceHPBar", frame)
-hpBar:SetSize(200, 20)
-hpBar:SetPoint("TOP", frame, "TOP", 0, 0)
-hpBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-hpBar:SetStatusBarColor(0.0, 0.8, 0.0, 1.0)
-local hpLeftText = hpBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-hpLeftText:SetPoint("LEFT", hpBar, "LEFT", 2, 0)
-hpLeftText:SetJustifyH("LEFT")
-local hpCenterText = hpBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-hpCenterText:SetPoint("CENTER", hpBar, "CENTER", 0, 0)
-hpCenterText:SetJustifyH("CENTER")
-local hpRightText = hpBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-hpRightText:SetPoint("RIGHT", hpBar, "RIGHT", -2, 0)
-hpRightText:SetJustifyH("RIGHT")
-local powerBar = CreateFrame("StatusBar", "PersonalResourcePowerBar", frame)
-powerBar:SetSize(200, 20)
-powerBar:SetPoint("TOP", hpBar, "BOTTOM", 0, -5)
-powerBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-powerBar:SetStatusBarColor(0.0, 0.3, 1.0, 1.0)
-local powerLeftText = powerBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-powerLeftText:SetPoint("LEFT", powerBar, "LEFT", 2, 0)
-powerLeftText:SetJustifyH("LEFT")
-local powerCenterText = powerBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-powerCenterText:SetPoint("CENTER", powerBar, "CENTER", 0, 0)
-powerCenterText:SetJustifyH("CENTER")
-local powerRightText = powerBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-powerRightText:SetPoint("RIGHT", powerBar, "RIGHT", -2, 0)
-powerRightText:SetJustifyH("RIGHT")
+-- Create the health bar using our new template
+local hpTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 20)
+hpTemplate.frame:SetPoint("TOP", frame, "TOP", 0, 0)
+local hpBar = hpTemplate.statusBar
+local hpLeftText = hpTemplate.leftText
+local hpCenterText = hpTemplate.centerText
+local hpRightText = hpTemplate.rightText
+
+-- Create the power bar using our new template
+local powerTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 20)
+powerTemplate.frame:SetPoint("TOP", hpTemplate.frame, "BOTTOM", 0, -5)
+local powerBar = powerTemplate.statusBar
+local powerLeftText = powerTemplate.leftText
+local powerCenterText = powerTemplate.centerText
+local powerRightText = powerTemplate.rightText
 function PersonalResource:UpdateHealth()
     local unit = "player"
     if UnitExists(unit) and UnitIsConnected(unit) then
