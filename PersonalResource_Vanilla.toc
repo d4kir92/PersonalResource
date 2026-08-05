@@ -1,9 +1,9 @@
 ## Interface: 11509
 ## Version: 0.1.5
 ## Title: PersonalResource |T136075:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
-## Notes: Show Personal Resource Info
-## Notes-deDE: Zeigt die persönlichen Resourcen an
-## Notes-ruRU: Show Personal Resource Info
+## Notes: Show Personal Resource Info (Health, Mana, Energy, Rage, ...)
+## Notes-deDE: Zeigt die persönlichen Resourcen an (Gesundheit, Mana, Energie, Wut, ...)
+## Notes-ruRU: Show Personal Resource Info (Health, Mana, Energy, Rage, ...)
 ## Author: D4KiR |T132115:16:16:0:0|t
 ## Category: D4KiR |T132115:16:16:0:0|t
 ## X-Category: D4KiR |T132115:16:16:0:0|t
