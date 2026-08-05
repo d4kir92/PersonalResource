@@ -16,15 +16,12 @@ frame:SetScript("OnMouseUp", function(self, button)
     end
 end)
 
--- Create the health bar using our new template
 local hpTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 20)
 hpTemplate.frame:SetPoint("TOP", frame, "TOP", 0, 0)
 local hpBar = hpTemplate.statusBar
 local hpLeftText = hpTemplate.leftText
 local hpCenterText = hpTemplate.centerText
 local hpRightText = hpTemplate.rightText
-
--- Create the power bar using our new template
 local powerTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 20)
 powerTemplate.frame:SetPoint("TOP", hpTemplate.frame, "BOTTOM", 0, -5)
 local powerBar = powerTemplate.statusBar
@@ -124,7 +121,7 @@ powerTypFrame:RegisterEvent("UNIT_POWER_UPDATE")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.1.3")
+    PersonalResource:SetVersion(136075, "0.1.4")
     PersonalResource:OnDisplayModeChanged()
     if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
         local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])
