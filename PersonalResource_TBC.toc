@@ -25,4 +25,6 @@ locale\ptBR.lua
 locale\ruRU.lua
 locale\zhCN.lua
 
+NamePlateUnitFrameTemplate.lua
+
 core.lua
