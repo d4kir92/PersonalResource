@@ -1,9 +1,17 @@
 ## Interface: 30300, 30403
-## Version: 0.1.6
+## Version: 0.1.7
 ## Title: PersonalResource |T136075:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
 ## Notes: Show Personal Resource Info (Health, Mana, Energy, Rage, ...)
 ## Notes-deDE: Zeigt die persönlichen Resourcen an (Gesundheit, Mana, Energie, Wut, ...)
-## Notes-ruRU: Show Personal Resource Info (Health, Mana, Energy, Rage, ...)
+## Notes-esES: Muestra información de recursos personales (Salud, Maná, Energía, Furia, ...)
+## Notes-esMX: Muestra información de recursos personales (Salud, Maná, Energía, Furia, ...)
+## Notes-frFR: Affiche les informations sur les ressources personnelles (Santé, Mana, Énergie, Rage, ...)
+## Notes-itIT: Mostra le informazioni sulle risorse personali (Salute, Mana, Energia, Furia, ...)
+## Notes-koKR: 개인 자원 정보를 표시합니다 (생명력, 마나, 기력, 분노 등)
+## Notes-ptBR: Mostra informações de recursos pessoais (Vida, Mana, Energia, Fúria, ...)
+## Notes-ruRU: Показывает информацию о личных ресурсах (здоровье, мана, энергия, ярость, ...)
+## Notes-zhCN: 显示个人资源信息(生命值、法力值、能量、怒气等)
+## Notes-zhTW: 顯示個人資源資訊(生命值、法力值、能量、怒氣等)
 ## Author: D4KiR |T132115:16:16:0:0|t
 ## Category: D4KiR |T132115:16:16:0:0|t
 ## X-Category: D4KiR |T132115:16:16:0:0|t

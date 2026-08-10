@@ -47,27 +47,14 @@ function PersonalResource:UpdateHealth()
         hpBar:SetMinMaxValues(0, maxHP)
         hpBar:SetValue(hp)
         local percent = math.floor((hp / maxHP) * 100)
-        local classColor = {
-            r = 0.2,
-            g = 1,
-            b = 0.2
-        }
-
-        if UnitExists("player") then
-            local _, class = UnitClass("player")
-            if class then
-                local r, g, b = GetClassColor(class)
-                if r and g and b then
-                    classColor = {
-                        r = r,
-                        g = g,
-                        b = b
-                    }
-                end
-            end
+        local r, g, b = 0.2, 1, 0.2
+        local _, class = UnitClass(unit)
+        if class then
+            local cr, cg, cb = GetClassColor(class)
+            if cr and cg and cb then r, g, b = cr, cg, cb end
         end
 
-        hpBar:SetStatusBarColor(classColor.r, classColor.g, classColor.b, 1.0)
+        hpBar:SetStatusBarColor(r, g, b, 1.0)
         if DISPLAY_MODE == "NUMERIC" then
             hpLeftText:SetText("")
             hpCenterText:SetText(string.format("%d / %d", hp, maxHP))
@@ -124,33 +111,18 @@ function PersonalResource:UpdatePowerType()
             local color = PowerBarColor[powerType]
             powerBar:SetStatusBarColor(color.r, color.g, color.b, color.a or 1.0)
         else
-            local classColor = {
-                r = 0.8,
-                g = 0.8,
-                b = 0.8
-            }
-
-            if UnitExists("player") then
-                local _, class = UnitClass("player")
-                if class then
-                    local r, g, b = GetClassColor(class)
-                    if r and g and b then
-                        classColor = {
-                            r = r,
-                            g = g,
-                            b = b
-                        }
-                    else
-                        classColor = {
-                            r = 0.0,
-                            g = 0.3,
-                            b = 1.0
-                        }
-                    end
+            local r, g, b = 0.8, 0.8, 0.8
+            local _, class = UnitClass(unit)
+            if class then
+                local cr, cg, cb = GetClassColor(class)
+                if cr and cg and cb then
+                    r, g, b = cr, cg, cb
+                else
+                    r, g, b = 0.0, 0.3, 1.0
                 end
             end
 
-            powerBar:SetStatusBarColor(classColor.r, classColor.g, classColor.b, 1.0)
+            powerBar:SetStatusBarColor(r, g, b, 1.0)
         end
     end
 end
@@ -195,7 +167,7 @@ PersonalResource:RegisterEvent(shapeshiftFrame, "UPDATE_SHAPESHIFT_FORM")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.1.6")
+    PersonalResource:SetVersion(136075, "0.1.7")
     PersonalResource:OnDisplayModeChanged()
     if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
         local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])
