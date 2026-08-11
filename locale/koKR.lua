@@ -1,0 +1,3 @@
+-- koKR 한국어 Korean
+local _, PersonalResource = ...
+PersonalResource:AddTrans("koKR", "LID_GENERAL", "일반")

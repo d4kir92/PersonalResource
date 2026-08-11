@@ -1,3 +1,3 @@
--- zhCN
+-- zhCN 简体中文 Chinese (Simplified)
 local _, PersonalResource = ...
-PersonalResource:AddTrans("zhCN", "LID_GENERAL", "General")
+PersonalResource:AddTrans("zhCN", "LID_GENERAL", "常规")

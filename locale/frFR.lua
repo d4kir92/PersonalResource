@@ -1,3 +1,3 @@
--- frFR
+-- frFR Français French
 local _, PersonalResource = ...
-PersonalResource:AddTrans("frFR", "LID_GENERAL", "General")
+PersonalResource:AddTrans("frFR", "LID_GENERAL", "Général")

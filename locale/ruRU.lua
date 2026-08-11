@@ -1,3 +1,3 @@
--- ruRU Russian
+-- ruRU Русский Russian
 local _, PersonalResource = ...
 PersonalResource:AddTrans("ruRU", "LID_GENERAL", "Общее")

@@ -1,3 +1,3 @@
--- deDE German Deutsch
+-- deDE Deutsch German
 local _, PersonalResource = ...
 PersonalResource:AddTrans("deDE", "LID_GENERAL", "Allgemein")

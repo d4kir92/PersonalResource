@@ -167,7 +167,7 @@ PersonalResource:RegisterEvent(shapeshiftFrame, "UPDATE_SHAPESHIFT_FORM")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.1.8")
+    PersonalResource:SetVersion(136075, "0.1.9")
     PersonalResource:OnDisplayModeChanged()
     if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
         local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])

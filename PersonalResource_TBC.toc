@@ -1,5 +1,5 @@
 ## Interface: 20506
-## Version: 0.1.8
+## Version: 0.1.9
 ## Title: PersonalResource |T136075:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
 ## Notes: Show Personal Resource Info (Health, Mana, Energy, Rage, ...)
 ## Notes-deDE: Zeigt die persönlichen Resourcen an (Gesundheit, Mana, Energie, Wut, ...)
@@ -24,14 +24,17 @@
 
 libs\D4Lib\D4Lib.xml
 
-locale\enUS.lua
 locale\deDE.lua
+locale\enUS.lua
 locale\esES.lua
+locale\esMX.lua
 locale\frFR.lua
 locale\itIT.lua
+locale\koKR.lua
 locale\ptBR.lua
 locale\ruRU.lua
 locale\zhCN.lua
+locale\zhTW.lua
 
 NamePlateUnitFrameTemplate.lua
 

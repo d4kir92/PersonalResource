@@ -1,0 +1,3 @@
+-- zhTW 繁體中文 Chinese (Traditional)
+local _, PersonalResource = ...
+PersonalResource:AddTrans("zhTW", "LID_GENERAL", "一般")

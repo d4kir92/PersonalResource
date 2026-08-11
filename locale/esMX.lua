@@ -1,0 +1,3 @@
+-- esMX Español (México) Spanish (Mexico)
+local _, PersonalResource = ...
+PersonalResource:AddTrans("esMX", "LID_GENERAL", "General")

@@ -1,3 +1,3 @@
--- esES
+-- esES Español Spanish
 local _, PersonalResource = ...
 PersonalResource:AddTrans("esES", "LID_GENERAL", "General")

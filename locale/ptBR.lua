@@ -1,3 +1,3 @@
--- ptBR
+-- ptBR Português (Brasil) Portuguese (Brazil)
 local _, PersonalResource = ...
-PersonalResource:AddTrans("ptBR", "LID_GENERAL", "General")
+PersonalResource:AddTrans("ptBR", "LID_GENERAL", "Geral")

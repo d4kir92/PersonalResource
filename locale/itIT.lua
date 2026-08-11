@@ -1,3 +1,3 @@
--- itIT
+-- itIT Italiano Italian
 local _, PersonalResource = ...
-PersonalResource:AddTrans("itIT", "LID_GENERAL", "General")
+PersonalResource:AddTrans("itIT", "LID_GENERAL", "Generale")
