@@ -167,12 +167,13 @@ PersonalResource:RegisterEvent(shapeshiftFrame, "UPDATE_SHAPESHIFT_FORM")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.1.9")
+    PersonalResource:SetVersion(136075, "0.1.10")
     PersonalResource:OnDisplayModeChanged()
     if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
         local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])
         if xOfs < 15 and xOfs > -15 then xOfs = 0 end
         if yOfs < 15 and yOfs > -15 then yOfs = 0 end
+        frame:ClearAllPoints()
         frame:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
     end
 end)
