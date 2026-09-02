@@ -1,4 +1,12 @@
 local _, PersonalResource = ...
+local BG_LEFT = -2
+local BG_TOP = 3
+local BG_RIGHT = 6
+local BG_BOTTOM = 7
+function PersonalResource:GetUnitFrameOverhang()
+    return BG_TOP, BG_BOTTOM, -BG_LEFT, BG_RIGHT
+end
+
 function PersonalResource:CreateBlizzardStyleUnitFrame(parent, width, height)
     local frame = CreateFrame("Frame", nil, parent)
     frame:SetSize(width, height)
@@ -9,8 +17,8 @@ function PersonalResource:CreateBlizzardStyleUnitFrame(parent, width, height)
     statusBar:SetStatusBarTexture("UI-HUD-CoolDownManager-Bar")
     local bg = frame:CreateTexture(nil, "BACKGROUND")
     bg:SetAtlas("UI-HUD-CoolDownManager-Bar-BG")
-    bg:SetPoint("TOPLEFT", frame, "TOPLEFT", -2, 3)
-    bg:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 6, -7)
+    bg:SetPoint("TOPLEFT", frame, "TOPLEFT", BG_LEFT, BG_TOP)
+    bg:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", BG_RIGHT, -BG_BOTTOM)
     local border = frame:CreateTexture(nil, "ARTWORK")
     border:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 1)
     border:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, -1)

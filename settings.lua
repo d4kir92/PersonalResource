@@ -96,7 +96,7 @@ function PersonalResource:InitSettings()
     AddCategory("BARS")
     AddSlider("WIDTH", "BARWIDTH", 200, 40, 800, 1, 0, function() PersonalResource:UpdateFrames() end)
     AddSlider("HEIGHT", "BARHEIGHT", 19, 4, 100, 1, 0, function() PersonalResource:UpdateFrames() end)
-    AddSlider("SPACING", "BARSPACING", 5, 0, 100, 1, 0, function() PersonalResource:UpdateFrames() end)
+    AddSlider("SPACING", "BARSPACING", 0, 0, 100, 1, 0, function() PersonalResource:UpdateFrames() end)
     prset:ResumeLayout()
     PersonalResource:CreateMinimapButton({
         ["name"] = "PersonalResource",

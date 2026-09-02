@@ -43,14 +43,16 @@ function PersonalResource:UpdateFrames()
     PersonalResourceG = PersonalResourceG or {}
     local width = PersonalResource:GV(PersonalResourceG, "BARWIDTH", 200)
     local height = PersonalResource:GV(PersonalResourceG, "BARHEIGHT", 19)
-    local spacing = PersonalResource:GV(PersonalResourceG, "BARSPACING", 5)
+    local spacing = PersonalResource:GV(PersonalResourceG, "BARSPACING", 0)
     local locked = PersonalResource:GV(PersonalResourceG, "LOCKED", false)
-    frame:SetSize(width, height * 2 + spacing)
+    local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
+    local gap = spacing + overTop + overBottom
+    frame:SetSize(width, height * 2 + gap)
     frame:EnableMouse(not locked)
     PersonalResource:SetUnitFrameSize(hpTemplate, width, height)
     PersonalResource:SetUnitFrameSize(powerTemplate, width, height)
     powerTemplate.frame:ClearAllPoints()
-    powerTemplate.frame:SetPoint("TOP", hpTemplate.frame, "BOTTOM", 0, -spacing)
+    powerTemplate.frame:SetPoint("TOP", hpTemplate.frame, "BOTTOM", 0, -gap)
 end
 
 function PersonalResource:UpdateHealth()
