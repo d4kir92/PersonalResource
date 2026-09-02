@@ -1,7 +1,35 @@
 local _, PersonalResource = ...
 local oldPowerType = nil
 local oldShapeshift = nil
-local DISPLAY_MODE = GetCVar("statusTextDisplay") or "BOTH"
+local LOWHEALTHPCT = 0.35
+local function GetCfg(key, default)
+    PersonalResourceG = PersonalResourceG or {}
+    return PersonalResource:GV(PersonalResourceG, key, default)
+end
+
+local function BuildValueText(cur, max, showValue, showMax)
+    if showValue and showMax then return string.format("%d / %d", cur, max) end
+    if showValue then return string.format("%d", cur) end
+    if showMax then return string.format("%d", max) end
+    return ""
+end
+
+local function SetBarTexts(template, percentText, valueText)
+    if percentText ~= "" and valueText ~= "" then
+        template.leftText:SetText(percentText)
+        template.centerText:SetText("")
+        template.rightText:SetText(valueText)
+    elseif percentText ~= "" then
+        template.leftText:SetText("")
+        template.centerText:SetText(percentText)
+        template.rightText:SetText("")
+    else
+        template.leftText:SetText("")
+        template.centerText:SetText(valueText)
+        template.rightText:SetText("")
+    end
+end
+
 local frame = CreateFrame("Frame", "PersonalResourceFrame", UIParent)
 frame:SetSize(200, 100)
 frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
@@ -40,11 +68,10 @@ powerLeftText:SetTextColor(1, 1, 1, 1)
 powerCenterText:SetTextColor(1, 1, 1, 1)
 powerRightText:SetTextColor(1, 1, 1, 1)
 function PersonalResource:UpdateFrames()
-    PersonalResourceG = PersonalResourceG or {}
-    local width = PersonalResource:GV(PersonalResourceG, "BARWIDTH", 200)
-    local height = PersonalResource:GV(PersonalResourceG, "BARHEIGHT", 19)
-    local spacing = PersonalResource:GV(PersonalResourceG, "BARSPACING", 0)
-    local locked = PersonalResource:GV(PersonalResourceG, "LOCKED", false)
+    local width = GetCfg("BARWIDTH", 200)
+    local height = GetCfg("BARHEIGHT", 19)
+    local spacing = GetCfg("BARSPACING", 0)
+    local locked = GetCfg("LOCKED", false)
     local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
     local gap = spacing + overTop + overBottom
     frame:SetSize(width, height * 2 + gap)
@@ -62,32 +89,23 @@ function PersonalResource:UpdateHealth()
         local maxHP = UnitHealthMax(unit)
         hpBar:SetMinMaxValues(0, maxHP)
         hpBar:SetValue(hp)
-        local percent = math.floor((hp / maxHP) * 100)
+        local fraction = 0
+        if maxHP > 0 then fraction = hp / maxHP end
+        local percent = math.floor(fraction * 100)
         local r, g, b = 0.2, 1, 0.2
-        local _, class = UnitClass(unit)
-        if class then
-            local cr, cg, cb = GetClassColor(class)
-            if cr and cg and cb then r, g, b = cr, cg, cb end
+        if GetCfg("USECLASSCOLOR", true) then
+            local _, class = UnitClass(unit)
+            if class then
+                local cr, cg, cb = GetClassColor(class)
+                if cr and cg and cb then r, g, b = cr, cg, cb end
+            end
         end
 
+        if GetCfg("SMARTWARNINGCOLORS", false) and fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
         hpBar:SetStatusBarColor(r, g, b, 1.0)
-        if DISPLAY_MODE == "NUMERIC" then
-            hpLeftText:SetText("")
-            hpCenterText:SetText(string.format("%d / %d", hp, maxHP))
-            hpRightText:SetText("")
-        elseif DISPLAY_MODE == "PERCENT" then
-            hpLeftText:SetText("")
-            hpCenterText:SetText(string.format("%d%%", percent))
-            hpRightText:SetText("")
-        elseif DISPLAY_MODE == "BOTH" then
-            hpLeftText:SetText(string.format("%d%%", percent))
-            hpCenterText:SetText("")
-            hpRightText:SetText(string.format("%d", hp))
-        else
-            hpLeftText:SetText(string.format("%d%%", percent))
-            hpCenterText:SetText("")
-            hpRightText:SetText(string.format("%d", hp))
-        end
+        local percentText = ""
+        if GetCfg("SHOWHEALTHPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
+        SetBarTexts(hpTemplate, percentText, BuildValueText(hp, maxHP, GetCfg("SHOWHEALTHVALUE", true), GetCfg("SHOWMAXHEALTHVALUE", false)))
     end
 end
 
@@ -98,24 +116,11 @@ function PersonalResource:UpdatePower()
         local maxPower = UnitPowerMax(unit)
         powerBar:SetMinMaxValues(0, maxPower)
         powerBar:SetValue(power)
-        local percent = math.floor((power / maxPower) * 100)
-        if DISPLAY_MODE == "NUMERIC" then
-            powerLeftText:SetText("")
-            powerCenterText:SetText(string.format("%d / %d", power, maxPower))
-            powerRightText:SetText("")
-        elseif DISPLAY_MODE == "PERCENT" then
-            powerLeftText:SetText("")
-            powerCenterText:SetText(string.format("%d%%", percent))
-            powerRightText:SetText("")
-        elseif DISPLAY_MODE == "BOTH" then
-            powerLeftText:SetText(string.format("%d%%", percent))
-            powerCenterText:SetText("")
-            powerRightText:SetText(string.format("%d", power))
-        else
-            powerLeftText:SetText(string.format("%d%%", percent))
-            powerCenterText:SetText("")
-            powerRightText:SetText(string.format("%d", power))
-        end
+        local percent = 0
+        if maxPower > 0 then percent = math.floor((power / maxPower) * 100) end
+        local percentText = ""
+        if GetCfg("SHOWPOWERPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
+        SetBarTexts(powerTemplate, percentText, BuildValueText(power, maxPower, GetCfg("SHOWPOWERVALUE", true), GetCfg("SHOWMAXPOWERVALUE", false)))
     end
 end
 
@@ -127,14 +132,12 @@ function PersonalResource:UpdatePowerType()
             local color = PowerBarColor[powerType]
             powerBar:SetStatusBarColor(color.r, color.g, color.b, color.a or 1.0)
         else
-            local r, g, b = 0.8, 0.8, 0.8
-            local _, class = UnitClass(unit)
-            if class then
-                local cr, cg, cb = GetClassColor(class)
-                if cr and cg and cb then
-                    r, g, b = cr, cg, cb
-                else
-                    r, g, b = 0.0, 0.3, 1.0
+            local r, g, b = 0.0, 0.3, 1.0
+            if GetCfg("USECLASSCOLOR", true) then
+                local _, class = UnitClass(unit)
+                if class then
+                    local cr, cg, cb = GetClassColor(class)
+                    if cr and cg and cb then r, g, b = cr, cg, cb end
                 end
             end
 
@@ -143,16 +146,13 @@ function PersonalResource:UpdatePowerType()
     end
 end
 
-function PersonalResource:OnDisplayModeChanged()
-    DISPLAY_MODE = GetCVar("statusTextDisplay") or "BOTH"
+function PersonalResource:UpdateAll()
+    PersonalResource:UpdateFrames()
     PersonalResource:UpdateHealth()
     PersonalResource:UpdatePower()
     PersonalResource:UpdatePowerType()
 end
 
-local cvarFrame = CreateFrame("Frame")
-cvarFrame:SetScript("OnEvent", function(self, event, arg1) if event == "CVAR_UPDATE" and arg1 == "statusTextDisplay" then PersonalResource:OnDisplayModeChanged() end end)
-PersonalResource:RegisterEvent(cvarFrame, "CVAR_UPDATE")
 local healthFrame = CreateFrame("Frame")
 healthFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateHealth() end)
 PersonalResource:RegisterEvent(healthFrame, "UNIT_HEALTH", "player")
@@ -186,8 +186,7 @@ initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetVersion(136075, "0.1.10")
     PersonalResourceG = PersonalResourceG or {}
     PersonalResource:InitSettings()
-    PersonalResource:UpdateFrames()
-    PersonalResource:OnDisplayModeChanged()
+    PersonalResource:UpdateAll()
     if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
         local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])
         if xOfs < 15 and xOfs > -15 then xOfs = 0 end
