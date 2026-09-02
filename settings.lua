@@ -94,9 +94,9 @@ function PersonalResource:InitSettings()
 
     AddCheckbox("LOCKED", "LOCKED", false, function() PersonalResource:UpdateFrames() end)
     AddCategory("BARS")
-    AddSlider("WIDTH", "BARWIDTH", 200, 40, 800, 1, 0, function() PersonalResource:UpdateFrames() end)
-    AddSlider("HEIGHT", "BARHEIGHT", 19, 4, 100, 1, 0, function() PersonalResource:UpdateFrames() end)
-    AddSlider("SPACING", "BARSPACING", 0, 0, 100, 1, 0, function() PersonalResource:UpdateFrames() end)
+    AddSlider("WIDTH", "BARWIDTH", 200, 40, 600, 1, 0, function() PersonalResource:UpdateFrames() end)
+    AddSlider("HEIGHT", "BARHEIGHT", 19, 4, 64, 1, 0, function() PersonalResource:UpdateFrames() end)
+    AddSlider("SPACING", "BARSPACING", 0, 0, 32, 1, 0, function() PersonalResource:UpdateFrames() end)
     prset:ResumeLayout()
     PersonalResource:CreateMinimapButton({
         ["name"] = "PersonalResource",
