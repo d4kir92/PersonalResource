@@ -130,7 +130,7 @@ function PersonalResource:UpdatePowerType()
         local powerType = UnitPowerType(unit)
         if PowerBarColor and PowerBarColor[powerType] then
             local color = PowerBarColor[powerType]
-            powerBar:SetStatusBarColor(color.r, color.g, color.b, color.a or 1.0)
+            powerBar:SetStatusBarColor(color.r, color.g, color.b, 1.0)
         else
             local r, g, b = 0.0, 0.3, 1.0
             if GetCfg("USECLASSCOLOR", true) then

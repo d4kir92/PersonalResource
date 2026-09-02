@@ -94,7 +94,7 @@ function PersonalResource:InitSettings()
 
     AddCheckbox("LOCKED", "LOCKED", false, function() PersonalResource:UpdateAll() end)
     AddCategory("BARS")
-    AddSlider("WIDTH", "BARWIDTH", 200, 40, 600, 1, 0, function() PersonalResource:UpdateAll() end)
+    AddSlider("WIDTH", "BARWIDTH", 200, 40, 400, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("HEIGHT", "BARHEIGHT", 19, 4, 64, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("SPACING", "BARSPACING", 0, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
     AddCategory("TEXT")
