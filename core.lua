@@ -2,6 +2,7 @@ local _, PersonalResource = ...
 local oldPowerType = nil
 local oldShapeshift = nil
 local LOWHEALTHPCT = 0.35
+local GRIDSIZE = 5
 local function GetCfg(key, default)
     PersonalResourceG = PersonalResourceG or {}
     return PersonalResource:GV(PersonalResourceG, key, default)
@@ -35,10 +36,48 @@ frame:SetSize(200, 100)
 frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
 frame:SetMovable(true)
 frame:EnableMouse(true)
-frame:SetScript("OnMouseDown", function(self, button) if button == "LeftButton" then self:StartMoving() end end)
+local moveOverlay = CreateFrame("Frame", "PersonalResourceMoveOverlay", frame)
+moveOverlay:SetAllPoints(frame)
+moveOverlay:SetFrameLevel(frame:GetFrameLevel() + 10)
+moveOverlay:EnableMouse(false)
+moveOverlay:Hide()
+local crossHor = moveOverlay:CreateTexture(nil, "OVERLAY")
+crossHor:SetColorTexture(1, 1, 1, 1)
+crossHor:SetHeight(1)
+crossHor:SetPoint("LEFT", moveOverlay, "LEFT", 0, 0)
+crossHor:SetPoint("RIGHT", moveOverlay, "RIGHT", 0, 0)
+local crossVer = moveOverlay:CreateTexture(nil, "OVERLAY")
+crossVer:SetColorTexture(1, 1, 1, 1)
+crossVer:SetWidth(1)
+crossVer:SetPoint("TOP", moveOverlay, "TOP", 0, 0)
+crossVer:SetPoint("BOTTOM", moveOverlay, "BOTTOM", 0, 0)
+local gridFrame = nil
+local function ShowMoveHelpers(show)
+    if show then
+        if gridFrame == nil then
+            PersonalResource:SetGridSize(GRIDSIZE)
+            gridFrame = PersonalResource:CreateGrid()
+        end
+
+        gridFrame:Show()
+        moveOverlay:Show()
+    else
+        if gridFrame then gridFrame:Hide() end
+        moveOverlay:Hide()
+    end
+end
+
+frame:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then
+        self:StartMoving()
+        ShowMoveHelpers(true)
+    end
+end)
+
 frame:SetScript("OnMouseUp", function(self, button)
     if button == "LeftButton" then
         self:StopMovingOrSizing()
+        ShowMoveHelpers(false)
         local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
         if xOfs < 15 and xOfs > -15 then xOfs = 0 end
         if yOfs < 15 and yOfs > -15 then yOfs = 0 end
