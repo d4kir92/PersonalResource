@@ -30,10 +30,18 @@ function PersonalResource:CreateBlizzardStyleUnitFrame(parent, width, height)
     return {
         frame = frame,
         statusBar = statusBar,
+        textFrame = textFrame,
         leftText = leftText,
         centerText = centerText,
         rightText = rightText
     }
+end
+
+function PersonalResource:SetUnitFrameSize(template, width, height)
+    if template == nil then return end
+    template.frame:SetSize(width, height)
+    template.statusBar:SetSize(width, height)
+    template.textFrame:SetSize(width, height)
 end
 
 function PersonalResource:UpdateNamePlateTemplate(template, unit)

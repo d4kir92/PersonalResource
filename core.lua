@@ -39,6 +39,20 @@ local powerRightText = powerTemplate.rightText
 powerLeftText:SetTextColor(1, 1, 1, 1)
 powerCenterText:SetTextColor(1, 1, 1, 1)
 powerRightText:SetTextColor(1, 1, 1, 1)
+function PersonalResource:UpdateFrames()
+    PersonalResourceG = PersonalResourceG or {}
+    local width = PersonalResource:GV(PersonalResourceG, "BARWIDTH", 200)
+    local height = PersonalResource:GV(PersonalResourceG, "BARHEIGHT", 19)
+    local spacing = PersonalResource:GV(PersonalResourceG, "BARSPACING", 5)
+    local locked = PersonalResource:GV(PersonalResourceG, "LOCKED", false)
+    frame:SetSize(width, height * 2 + spacing)
+    frame:EnableMouse(not locked)
+    PersonalResource:SetUnitFrameSize(hpTemplate, width, height)
+    PersonalResource:SetUnitFrameSize(powerTemplate, width, height)
+    powerTemplate.frame:ClearAllPoints()
+    powerTemplate.frame:SetPoint("TOP", hpTemplate.frame, "BOTTOM", 0, -spacing)
+end
+
 function PersonalResource:UpdateHealth()
     local unit = "player"
     if UnitExists(unit) and UnitIsConnected(unit) then
@@ -168,6 +182,9 @@ local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
     PersonalResource:SetVersion(136075, "0.1.10")
+    PersonalResourceG = PersonalResourceG or {}
+    PersonalResource:InitSettings()
+    PersonalResource:UpdateFrames()
     PersonalResource:OnDisplayModeChanged()
     if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
         local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])

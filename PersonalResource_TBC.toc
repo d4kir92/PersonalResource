@@ -38,4 +38,6 @@ locale\zhTW.lua
 
 NamePlateUnitFrameTemplate.lua
 
+settings.lua
+
 core.lua
