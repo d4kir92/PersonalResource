@@ -8,6 +8,7 @@ local MANAPOWERTYPE = 0
 local ENERGYPOWERTYPE = 3
 local COMBOPOWERTYPE = 4
 local BARKEYS = {"HEALTH", "POWER", "MANA", "COMBO"}
+local PETBARKEYS = {"HEALTH", "POWER"}
 local function GetCfg(key, default)
     PersonalResourceG = PersonalResourceG or {}
     return PersonalResource:GV(PersonalResourceG, key, default)
@@ -163,6 +164,11 @@ local petPowerBar = petPowerTemplate.statusBar
 petPowerTemplate.leftText:SetTextColor(1, 1, 1, 1)
 petPowerTemplate.centerText:SetTextColor(1, 1, 1, 1)
 petPowerTemplate.rightText:SetTextColor(1, 1, 1, 1)
+local petBarTemplates = {
+    ["HEALTH"] = petHPTemplate,
+    ["POWER"] = petPowerTemplate
+}
+
 function PersonalResource:HasSecondaryMana()
     local unit = "player"
     if not UnitExists(unit) then return false end
@@ -197,25 +203,33 @@ function PersonalResource:HasComboPoints()
     return false
 end
 
-function PersonalResource:GetBarOrder()
+local function BuildBarOrder(prefix, keys, templates)
     local order = {}
     local used = {}
-    for i = 1, #BARKEYS do
-        local key = GetCfg("BARSLOT" .. i, BARKEYS[i])
-        if barTemplates[key] and not used[key] then
+    for i = 1, #keys do
+        local key = GetCfg(prefix .. i, keys[i])
+        if templates[key] and not used[key] then
             used[key] = true
             table.insert(order, key)
         end
     end
 
-    for i = 1, #BARKEYS do
-        local key = BARKEYS[i]
+    for i = 1, #keys do
+        local key = keys[i]
         if not used[key] then
             used[key] = true
             table.insert(order, key)
         end
     end
     return order
+end
+
+function PersonalResource:GetBarOrder()
+    return BuildBarOrder("BARSLOT", BARKEYS, barTemplates)
+end
+
+function PersonalResource:GetPetBarOrder()
+    return BuildBarOrder("PETBARSLOT", PETBARKEYS, petBarTemplates)
 end
 
 function PersonalResource:UpdateComboLayout(width)
@@ -408,22 +422,30 @@ function PersonalResource:UpdatePetFrames()
     local locked = GetCfg("LOCKED", false)
     local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
     local gap = spacing + overTop + overBottom
-    local shown = 1
-    PersonalResource:SetUnitFrameSize(petHPTemplate, width, height)
-    petHPTemplate.frame:ClearAllPoints()
-    petHPTemplate.frame:SetPoint("TOP", petFrame, "TOP", 0, 0)
-    petHPTemplate.frame:Show()
-    if UnitPowerMax("pet") > 0 then
-        PersonalResource:SetUnitFrameSize(petPowerTemplate, width, height)
-        petPowerTemplate.frame:ClearAllPoints()
-        petPowerTemplate.frame:SetPoint("TOP", petHPTemplate.frame, "BOTTOM", 0, -gap)
-        petPowerTemplate.frame:Show()
-        shown = shown + 1
-    else
-        petPowerTemplate.frame:Hide()
+    local showPower = UnitPowerMax("pet") > 0
+    local previous = nil
+    local total = 0
+    for _, key in ipairs(PersonalResource:GetPetBarOrder()) do
+        local template = petBarTemplates[key]
+        if key == "POWER" and not showPower then
+            template.frame:Hide()
+        else
+            PersonalResource:SetUnitFrameSize(template, width, height)
+            template.frame:ClearAllPoints()
+            if previous == nil then
+                template.frame:SetPoint("TOP", petFrame, "TOP", 0, 0)
+            else
+                template.frame:SetPoint("TOP", previous, "BOTTOM", 0, -gap)
+                total = total + gap
+            end
+
+            template.frame:Show()
+            total = total + height
+            previous = template.frame
+        end
     end
 
-    petFrame:SetSize(width, height * shown + gap * (shown - 1))
+    petFrame:SetSize(width, math.max(total, 1))
     petFrame:EnableMouse(not locked)
     petFrame:Show()
 end
@@ -554,7 +576,7 @@ PersonalResource:RegisterEvent(petStateFrame, "PLAYER_ENTERING_WORLD")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.2.0")
+    PersonalResource:SetVersion(136075, "0.2.1")
     PersonalResourceG = PersonalResourceG or {}
     PersonalResource:InitSettings()
     PersonalResource:UpdateAll()

@@ -23,7 +23,32 @@ local BARCHOICES = {
     }
 }
 
-local barSlots = {}
+local PETBARKEYS = {"HEALTH", "POWER"}
+local PETBARCHOICES = {
+    {
+        ["value"] = "HEALTH",
+        ["label"] = "LID_HEALTH"
+    },
+    {
+        ["value"] = "POWER",
+        ["label"] = "LID_POWER"
+    }
+}
+
+local SLOTKEYS = {
+    ["BARSLOT"] = BARKEYS,
+    ["PETBARSLOT"] = PETBARKEYS
+}
+
+local SLOTCHOICES = {
+    ["BARSLOT"] = BARCHOICES,
+    ["PETBARSLOT"] = PETBARCHOICES
+}
+
+local slotHolders = {
+    ["BARSLOT"] = {},
+    ["PETBARSLOT"] = {}
+}
 function PersonalResource:ToggleSettings()
     if prset == nil then return end
     prset:Toggle()
@@ -84,31 +109,32 @@ local function AddSlider(key, dbkey, default, vmin, vmax, step, decimals, func)
     })
 end
 
-local function GetBarSlot(index)
-    return PersonalResource:GV(PersonalResourceG, "BARSLOT" .. index, BARKEYS[index])
+local function GetBarSlot(prefix, index)
+    return PersonalResource:GV(PersonalResourceG, prefix .. index, SLOTKEYS[prefix][index])
 end
 
-local function SetBarSlot(index, value)
-    local old = GetBarSlot(index)
+local function SetBarSlot(prefix, index, value)
+    local old = GetBarSlot(prefix, index)
     if old == value then return end
-    for i = 1, #BARKEYS do
-        if i ~= index and GetBarSlot(i) == value then
-            PersonalResource:SV(PersonalResourceG, "BARSLOT" .. i, old)
-            if barSlots[i] then barSlots[i]:SetValue(old) end
+    local holders = slotHolders[prefix]
+    for i = 1, #SLOTKEYS[prefix] do
+        if i ~= index and GetBarSlot(prefix, i) == value then
+            PersonalResource:SV(PersonalResourceG, prefix .. i, old)
+            if holders[i] then holders[i]:SetValue(old) end
         end
     end
 
-    PersonalResource:SV(PersonalResourceG, "BARSLOT" .. index, value)
+    PersonalResource:SV(PersonalResourceG, prefix .. index, value)
     PersonalResource:UpdateAll()
 end
 
-local function AddBarSlot(index)
-    barSlots[index] = prset:AddDropdown({
-        ["label"] = "LID_BARSLOT" .. index,
-        ["search"] = "BARSLOT" .. index,
-        ["value"] = GetBarSlot(index),
-        ["choices"] = BARCHOICES,
-        ["func"] = function(value) SetBarSlot(index, value) end
+local function AddBarSlot(prefix, index)
+    slotHolders[prefix][index] = prset:AddDropdown({
+        ["label"] = "LID_" .. prefix .. index,
+        ["search"] = prefix .. index,
+        ["value"] = GetBarSlot(prefix, index),
+        ["choices"] = SLOTCHOICES[prefix],
+        ["func"] = function(value) SetBarSlot(prefix, index, value) end
     })
 end
 
@@ -151,10 +177,10 @@ function PersonalResource:InitSettings()
     AddSlider("COMBOSIZE", "COMBOPOINTSIZE", 20, 6, 48, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("COMBOSPACING", "COMBOPOINTSPACING", 4, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
     AddCategory("BARORDER", 2)
-    AddBarSlot(1)
-    AddBarSlot(2)
-    AddBarSlot(3)
-    AddBarSlot(4)
+    AddBarSlot("BARSLOT", 1)
+    AddBarSlot("BARSLOT", 2)
+    AddBarSlot("BARSLOT", 3)
+    AddBarSlot("BARSLOT", 4)
     AddCategory("TEXT")
     AddCategory("HEALTH", 2)
     AddCheckbox("SHOWHEALTHVALUE", "SHOWHEALTHVALUE", true, function() PersonalResource:UpdateAll() end)
@@ -169,10 +195,15 @@ function PersonalResource:InitSettings()
     AddSlider("PETWIDTH", "PETBARWIDTH", 150, 40, 400, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("PETHEIGHT", "PETBARHEIGHT", 14, 4, 64, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("PETSPACING", "PETBARSPACING", 0, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
-    AddCategory("PETTEXT", 2)
+    AddCategory("PETBARORDER", 2)
+    AddBarSlot("PETBARSLOT", 1)
+    AddBarSlot("PETBARSLOT", 2)
+    AddCategory("PETTEXT")
+    AddCategory("PETHEALTH", 2)
     AddCheckbox("SHOWPETHEALTHVALUE", "SHOWPETHEALTHVALUE", true, function() PersonalResource:UpdateAll() end)
     AddCheckbox("SHOWPETMAXHEALTHVALUE", "SHOWPETMAXHEALTHVALUE", false, function() PersonalResource:UpdateAll() end)
     AddCheckbox("SHOWPETHEALTHPERCENTAGE", "SHOWPETHEALTHPERCENTAGE", true, function() PersonalResource:UpdateAll() end)
+    AddCategory("PETPOWER", 2)
     AddCheckbox("SHOWPETPOWERVALUE", "SHOWPETPOWERVALUE", true, function() PersonalResource:UpdateAll() end)
     AddCheckbox("SHOWPETMAXPOWERVALUE", "SHOWPETMAXPOWERVALUE", false, function() PersonalResource:UpdateAll() end)
     AddCheckbox("SHOWPETPOWERPERCENTAGE", "SHOWPETPOWERPERCENTAGE", true, function() PersonalResource:UpdateAll() end)
