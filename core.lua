@@ -1,6 +1,7 @@
 local _, PersonalResource = ...
 local oldPowerType = nil
 local oldShapeshift = nil
+local oldPetState = nil
 local LOWHEALTHPCT = 0.35
 local GRIDSIZE = 5
 local MANAPOWERTYPE = 0
@@ -33,28 +34,8 @@ local function SetBarTexts(template, percentText, valueText)
     end
 end
 
-local frame = CreateFrame("Frame", "PersonalResourceFrame", UIParent)
-frame:SetSize(200, 100)
-frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
-frame:SetMovable(true)
-frame:EnableMouse(true)
-local moveOverlay = CreateFrame("Frame", "PersonalResourceMoveOverlay", frame)
-moveOverlay:SetAllPoints(frame)
-moveOverlay:SetFrameLevel(frame:GetFrameLevel() + 10)
-moveOverlay:EnableMouse(false)
-moveOverlay:Hide()
-local crossHor = moveOverlay:CreateTexture(nil, "OVERLAY")
-crossHor:SetColorTexture(1, 1, 1, 1)
-crossHor:SetHeight(1)
-crossHor:SetPoint("LEFT", moveOverlay, "LEFT", 0, 0)
-crossHor:SetPoint("RIGHT", moveOverlay, "RIGHT", 0, 0)
-local crossVer = moveOverlay:CreateTexture(nil, "OVERLAY")
-crossVer:SetColorTexture(1, 1, 1, 1)
-crossVer:SetWidth(1)
-crossVer:SetPoint("TOP", moveOverlay, "TOP", 0, 0)
-crossVer:SetPoint("BOTTOM", moveOverlay, "BOTTOM", 0, 0)
 local gridFrame = nil
-local function ShowMoveHelpers(show)
+local function ShowMoveHelpers(moveOverlay, show)
     if show then
         if gridFrame == nil then
             PersonalResource:SetGridSize(GRIDSIZE)
@@ -69,26 +50,67 @@ local function ShowMoveHelpers(show)
     end
 end
 
-frame:SetScript("OnMouseDown", function(self, button)
-    if button == "LeftButton" then
-        self:StartMoving()
-        ShowMoveHelpers(true)
-    end
-end)
+local function CreateMovableFrame(name, dbKey)
+    local movable = CreateFrame("Frame", name, UIParent)
+    movable:SetSize(200, 100)
+    movable:SetMovable(true)
+    movable:EnableMouse(true)
+    local moveOverlay = CreateFrame("Frame", name .. "MoveOverlay", movable)
+    moveOverlay:SetAllPoints(movable)
+    moveOverlay:SetFrameLevel(movable:GetFrameLevel() + 10)
+    moveOverlay:EnableMouse(false)
+    moveOverlay:Hide()
+    local crossHor = moveOverlay:CreateTexture(nil, "OVERLAY")
+    crossHor:SetColorTexture(1, 1, 1, 1)
+    crossHor:SetHeight(1)
+    crossHor:SetPoint("LEFT", moveOverlay, "LEFT", 0, 0)
+    crossHor:SetPoint("RIGHT", moveOverlay, "RIGHT", 0, 0)
+    local crossVer = moveOverlay:CreateTexture(nil, "OVERLAY")
+    crossVer:SetColorTexture(1, 1, 1, 1)
+    crossVer:SetWidth(1)
+    crossVer:SetPoint("TOP", moveOverlay, "TOP", 0, 0)
+    crossVer:SetPoint("BOTTOM", moveOverlay, "BOTTOM", 0, 0)
+    movable:SetScript("OnMouseDown", function(self, button)
+        if button == "LeftButton" then
+            self:StartMoving()
+            ShowMoveHelpers(moveOverlay, true)
+        end
+    end)
 
-frame:SetScript("OnMouseUp", function(self, button)
-    if button == "LeftButton" then
-        self:StopMovingOrSizing()
-        ShowMoveHelpers(false)
-        local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
-        if xOfs < 15 and xOfs > -15 then xOfs = 0 end
-        if yOfs < 15 and yOfs > -15 then yOfs = 0 end
-        if not PersonalResourceG then PersonalResourceG = {} end
-        if not PersonalResourceG["mainFrame"] then PersonalResourceG["mainFrame"] = {} end
-        PersonalResourceG["mainFrame"]["position"] = {point, relativePoint, xOfs, yOfs}
-        frame:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
-    end
-end)
+    movable:SetScript("OnMouseUp", function(self, button)
+        if button == "LeftButton" then
+            self:StopMovingOrSizing()
+            ShowMoveHelpers(moveOverlay, false)
+            local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
+            if xOfs < 15 and xOfs > -15 then xOfs = 0 end
+            if yOfs < 15 and yOfs > -15 then yOfs = 0 end
+            if not PersonalResourceG then PersonalResourceG = {} end
+            if not PersonalResourceG[dbKey] then PersonalResourceG[dbKey] = {} end
+            PersonalResourceG[dbKey]["position"] = {point, relativePoint, xOfs, yOfs}
+            self:ClearAllPoints()
+            self:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
+        end
+    end)
+
+    return movable
+end
+
+local function RestoreFramePosition(movable, dbKey)
+    if PersonalResourceG == nil then return end
+    if PersonalResourceG[dbKey] == nil then return end
+    if PersonalResourceG[dbKey]["position"] == nil then return end
+    local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG[dbKey]["position"])
+    if xOfs < 15 and xOfs > -15 then xOfs = 0 end
+    if yOfs < 15 and yOfs > -15 then yOfs = 0 end
+    movable:ClearAllPoints()
+    movable:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
+end
+
+local frame = CreateMovableFrame("PersonalResourceFrame", "mainFrame")
+frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
+local petFrame = CreateMovableFrame("PersonalResourcePetFrame", "petFrame")
+petFrame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 300)
+petFrame:Hide()
 
 local hpTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
 hpTemplate.frame:SetPoint("TOP", frame, "TOP", 0, 0)
@@ -120,6 +142,19 @@ local barTemplates = {
     ["POWER"] = powerTemplate,
     ["MANA"] = manaTemplate
 }
+
+local petHPTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(petFrame, 150, 14)
+petHPTemplate.frame:SetPoint("TOP", petFrame, "TOP", 0, 0)
+local petHPBar = petHPTemplate.statusBar
+petHPTemplate.leftText:SetTextColor(1, 1, 1, 1)
+petHPTemplate.centerText:SetTextColor(1, 1, 1, 1)
+petHPTemplate.rightText:SetTextColor(1, 1, 1, 1)
+local petPowerTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(petFrame, 150, 14)
+petPowerTemplate.frame:SetPoint("TOP", petHPTemplate.frame, "BOTTOM", 0, -5)
+local petPowerBar = petPowerTemplate.statusBar
+petPowerTemplate.leftText:SetTextColor(1, 1, 1, 1)
+petPowerTemplate.centerText:SetTextColor(1, 1, 1, 1)
+petPowerTemplate.rightText:SetTextColor(1, 1, 1, 1)
 
 function PersonalResource:HasSecondaryMana()
     local unit = "player"
@@ -269,12 +304,103 @@ function PersonalResource:UpdatePowerType()
     end
 end
 
+function PersonalResource:HasPet()
+    local unit = "pet"
+    if not GetCfg("SHOWPETFRAME", true) then return false end
+    if not UnitExists(unit) then return false end
+    if UnitIsDead(unit) then return false end
+    if UnitHealthMax(unit) <= 0 then return false end
+
+    return true
+end
+
+function PersonalResource:UpdatePetFrames()
+    oldPetState = PersonalResource:HasPet()
+    if not oldPetState then
+        petFrame:Hide()
+
+        return
+    end
+
+    local width = GetCfg("PETBARWIDTH", 150)
+    local height = GetCfg("PETBARHEIGHT", 14)
+    local spacing = GetCfg("PETBARSPACING", 0)
+    local locked = GetCfg("LOCKED", false)
+    local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
+    local gap = spacing + overTop + overBottom
+    local shown = 1
+    PersonalResource:SetUnitFrameSize(petHPTemplate, width, height)
+    petHPTemplate.frame:ClearAllPoints()
+    petHPTemplate.frame:SetPoint("TOP", petFrame, "TOP", 0, 0)
+    petHPTemplate.frame:Show()
+    if UnitPowerMax("pet") > 0 then
+        PersonalResource:SetUnitFrameSize(petPowerTemplate, width, height)
+        petPowerTemplate.frame:ClearAllPoints()
+        petPowerTemplate.frame:SetPoint("TOP", petHPTemplate.frame, "BOTTOM", 0, -gap)
+        petPowerTemplate.frame:Show()
+        shown = shown + 1
+    else
+        petPowerTemplate.frame:Hide()
+    end
+
+    petFrame:SetSize(width, height * shown + gap * (shown - 1))
+    petFrame:EnableMouse(not locked)
+    petFrame:Show()
+end
+
+function PersonalResource:UpdatePetHealth()
+    if not PersonalResource:HasPet() then return end
+    local unit = "pet"
+    local hp = UnitHealth(unit)
+    local maxHP = UnitHealthMax(unit)
+    petHPBar:SetMinMaxValues(0, maxHP)
+    petHPBar:SetValue(hp)
+    local fraction = 0
+    if maxHP > 0 then fraction = hp / maxHP end
+    local percent = math.floor(fraction * 100)
+    local r, g, b = 0.2, 1, 0.2
+    if GetCfg("SMARTWARNINGCOLORS", false) and fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
+    petHPBar:SetStatusBarColor(r, g, b, 1.0)
+    local percentText = ""
+    if GetCfg("SHOWPETHEALTHPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
+    SetBarTexts(petHPTemplate, percentText, BuildValueText(hp, maxHP, GetCfg("SHOWPETHEALTHVALUE", true), GetCfg("SHOWPETMAXHEALTHVALUE", false)))
+end
+
+function PersonalResource:UpdatePetPower()
+    if not PersonalResource:HasPet() then return end
+    local unit = "pet"
+    local power = UnitPower(unit)
+    local maxPower = UnitPowerMax(unit)
+    petPowerBar:SetMinMaxValues(0, maxPower)
+    petPowerBar:SetValue(power)
+    local percent = 0
+    if maxPower > 0 then percent = math.floor((power / maxPower) * 100) end
+    local powerType = UnitPowerType(unit)
+    if PowerBarColor and PowerBarColor[powerType] then
+        local color = PowerBarColor[powerType]
+        petPowerBar:SetStatusBarColor(color.r, color.g, color.b, 1.0)
+    else
+        petPowerBar:SetStatusBarColor(0.0, 0.0, 1.0, 1.0)
+    end
+
+    local percentText = ""
+    if GetCfg("SHOWPETPOWERPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
+    SetBarTexts(petPowerTemplate, percentText, BuildValueText(power, maxPower, GetCfg("SHOWPETPOWERVALUE", true), GetCfg("SHOWPETMAXPOWERVALUE", false)))
+end
+
+function PersonalResource:UpdatePet()
+    PersonalResource:UpdatePetFrames()
+    PersonalResource:UpdatePetHealth()
+    PersonalResource:UpdatePetPower()
+end
+
 function PersonalResource:UpdateAll()
     PersonalResource:UpdateFrames()
     PersonalResource:UpdateHealth()
     PersonalResource:UpdatePower()
     PersonalResource:UpdateMana()
     PersonalResource:UpdatePowerType()
+    PersonalResource:UpdatePet()
 end
 
 local healthFrame = CreateFrame("Frame")
@@ -312,6 +438,33 @@ shapeshiftFrame:SetScript("OnEvent", function(self, event, ...)
 end)
 
 PersonalResource:RegisterEvent(shapeshiftFrame, "UPDATE_SHAPESHIFT_FORM")
+local petHealthFrame = CreateFrame("Frame")
+petHealthFrame:SetScript("OnEvent", function(self, event, ...)
+    if PersonalResource:HasPet() ~= oldPetState then
+        PersonalResource:UpdatePet()
+    else
+        PersonalResource:UpdatePetHealth()
+    end
+end)
+
+PersonalResource:RegisterEvent(petHealthFrame, "UNIT_HEALTH", "pet")
+PersonalResource:RegisterEvent(petHealthFrame, "UNIT_MAXHEALTH", "pet")
+local petPowerFrame = CreateFrame("Frame")
+petPowerFrame:SetScript("OnEvent", function(self, event, ...)
+    if event == "UNIT_POWER_UPDATE" then
+        PersonalResource:UpdatePetPower()
+    else
+        PersonalResource:UpdatePet()
+    end
+end)
+
+PersonalResource:RegisterEvent(petPowerFrame, "UNIT_POWER_UPDATE", "pet")
+PersonalResource:RegisterEvent(petPowerFrame, "UNIT_MAXPOWER", "pet")
+PersonalResource:RegisterEvent(petPowerFrame, "UNIT_DISPLAYPOWER", "pet")
+local petStateFrame = CreateFrame("Frame")
+petStateFrame:SetScript("OnEvent", function(self, event, ...) C_Timer.After(0.1, function() PersonalResource:UpdatePet() end) end)
+PersonalResource:RegisterEvent(petStateFrame, "UNIT_PET", "player")
+PersonalResource:RegisterEvent(petStateFrame, "PLAYER_ENTERING_WORLD")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
@@ -319,13 +472,8 @@ initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResourceG = PersonalResourceG or {}
     PersonalResource:InitSettings()
     PersonalResource:UpdateAll()
-    if PersonalResourceG and PersonalResourceG["mainFrame"] and PersonalResourceG["mainFrame"]["position"] then
-        local point, relativePoint, xOfs, yOfs = unpack(PersonalResourceG["mainFrame"]["position"])
-        if xOfs < 15 and xOfs > -15 then xOfs = 0 end
-        if yOfs < 15 and yOfs > -15 then yOfs = 0 end
-        frame:ClearAllPoints()
-        frame:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
-    end
+    RestoreFramePosition(frame, "mainFrame")
+    RestoreFramePosition(petFrame, "petFrame")
 end)
 
 PersonalResource:RegisterEvent(initFrame, "PLAYER_LOGIN")
