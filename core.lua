@@ -5,7 +5,9 @@ local oldPetState = nil
 local LOWHEALTHPCT = 0.35
 local GRIDSIZE = 5
 local MANAPOWERTYPE = 0
-local BARKEYS = {"HEALTH", "POWER", "MANA"}
+local ENERGYPOWERTYPE = 3
+local COMBOPOWERTYPE = 4
+local BARKEYS = {"HEALTH", "POWER", "MANA", "COMBO"}
 local function GetCfg(key, default)
     PersonalResourceG = PersonalResourceG or {}
     return PersonalResource:GV(PersonalResourceG, key, default)
@@ -91,7 +93,6 @@ local function CreateMovableFrame(name, dbKey)
             self:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
         end
     end)
-
     return movable
 end
 
@@ -111,7 +112,6 @@ frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
 local petFrame = CreateMovableFrame("PersonalResourcePetFrame", "petFrame")
 petFrame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 300)
 petFrame:Hide()
-
 local hpTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
 hpTemplate.frame:SetPoint("TOP", frame, "TOP", 0, 0)
 local hpBar = hpTemplate.statusBar
@@ -137,10 +137,18 @@ local manaBar = manaTemplate.statusBar
 manaTemplate.leftText:SetTextColor(1, 1, 1, 1)
 manaTemplate.centerText:SetTextColor(1, 1, 1, 1)
 manaTemplate.rightText:SetTextColor(1, 1, 1, 1)
+local comboFrame = CreateFrame("Frame", nil, frame)
+comboFrame:SetSize(200, 20)
+comboFrame:SetPoint("TOP", manaTemplate.frame, "BOTTOM", 0, -5)
+comboFrame:Hide()
+local comboPoints = {}
 local barTemplates = {
     ["HEALTH"] = hpTemplate,
     ["POWER"] = powerTemplate,
-    ["MANA"] = manaTemplate
+    ["MANA"] = manaTemplate,
+    ["COMBO"] = {
+        frame = comboFrame
+    }
 }
 
 local petHPTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(petFrame, 150, 14)
@@ -155,7 +163,6 @@ local petPowerBar = petPowerTemplate.statusBar
 petPowerTemplate.leftText:SetTextColor(1, 1, 1, 1)
 petPowerTemplate.centerText:SetTextColor(1, 1, 1, 1)
 petPowerTemplate.rightText:SetTextColor(1, 1, 1, 1)
-
 function PersonalResource:HasSecondaryMana()
     local unit = "player"
     if not UnitExists(unit) then return false end
@@ -163,10 +170,37 @@ function PersonalResource:HasSecondaryMana()
     return UnitPowerMax(unit, MANAPOWERTYPE) > 0
 end
 
+local function GetMaxComboPoints()
+    local maxPoints = UnitPowerMax("player", COMBOPOWERTYPE) or 0
+    if maxPoints <= 0 then maxPoints = MAX_COMBO_POINTS or 5 end
+    return maxPoints
+end
+
+local function GetCurrentComboPoints()
+    if GetComboPoints then return GetComboPoints("player", "target") or 0 end
+    return UnitPower("player", COMBOPOWERTYPE) or 0
+end
+
+local function EnsureComboPoints(count)
+    for i = #comboPoints + 1, count do
+        comboPoints[i] = PersonalResource:CreateComboPoint(comboFrame)
+    end
+end
+
+function PersonalResource:HasComboPoints()
+    local unit = "player"
+    if not GetCfg("SHOWCOMBOPOINTS", true) then return false end
+    if not UnitExists(unit) then return false end
+    local _, class = UnitClass(unit)
+    if class == "ROGUE" then return true end
+    if class == "DRUID" then return UnitPowerType(unit) == ENERGYPOWERTYPE end
+    return false
+end
+
 function PersonalResource:GetBarOrder()
     local order = {}
     local used = {}
-    for i = 1, 3 do
+    for i = 1, #BARKEYS do
         local key = GetCfg("BARSLOT" .. i, BARKEYS[i])
         if barTemplates[key] and not used[key] then
             used[key] = true
@@ -174,15 +208,44 @@ function PersonalResource:GetBarOrder()
         end
     end
 
-    for i = 1, 3 do
+    for i = 1, #BARKEYS do
         local key = BARKEYS[i]
         if not used[key] then
             used[key] = true
             table.insert(order, key)
         end
     end
-
     return order
+end
+
+function PersonalResource:UpdateComboLayout(width)
+    local size = GetCfg("COMBOPOINTSIZE", 20)
+    local spacing = GetCfg("COMBOPOINTSPACING", 4)
+    local maxPoints = GetMaxComboPoints()
+    EnsureComboPoints(maxPoints)
+    comboFrame:SetSize(width, size)
+    local total = maxPoints * size + math.max(maxPoints - 1, 0) * spacing
+    local first = -total / 2 + size / 2
+    for i = 1, #comboPoints do
+        local point = comboPoints[i]
+        if i <= maxPoints then
+            PersonalResource:SetComboPointSize(point, size)
+            point.frame:ClearAllPoints()
+            point.frame:SetPoint("CENTER", comboFrame, "CENTER", first + (i - 1) * (size + spacing), 0)
+            point.frame:Show()
+        else
+            point.frame:Hide()
+        end
+    end
+    return size
+end
+
+function PersonalResource:UpdateComboPoints()
+    if not PersonalResource:HasComboPoints() then return end
+    local value = GetCurrentComboPoints()
+    for i = 1, #comboPoints do
+        PersonalResource:SetComboPointFull(comboPoints[i], i <= value)
+    end
 end
 
 function PersonalResource:UpdateFrames()
@@ -191,30 +254,49 @@ function PersonalResource:UpdateFrames()
     local spacing = GetCfg("BARSPACING", 0)
     local locked = GetCfg("LOCKED", false)
     local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
-    local gap = spacing + overTop + overBottom
     local showMana = PersonalResource:HasSecondaryMana()
+    local showCombo = PersonalResource:HasComboPoints()
     local previous = nil
-    local shown = 0
+    local previousBottom = 0
+    local total = 0
     for _, key in ipairs(PersonalResource:GetBarOrder()) do
         local template = barTemplates[key]
-        if key == "MANA" and not showMana then
+        local visible = true
+        if key == "MANA" then
+            visible = showMana
+        elseif key == "COMBO" then
+            visible = showCombo
+        end
+
+        if not visible then
             template.frame:Hide()
         else
-            PersonalResource:SetUnitFrameSize(template, width, height)
+            local barHeight = height
+            local barTop, barBottom = overTop, overBottom
+            if key == "COMBO" then
+                barHeight = PersonalResource:UpdateComboLayout(width)
+                barTop, barBottom = 0, 0
+            else
+                PersonalResource:SetUnitFrameSize(template, width, height)
+            end
+
             template.frame:ClearAllPoints()
             if previous == nil then
                 template.frame:SetPoint("TOP", frame, "TOP", 0, 0)
             else
+                local gap = spacing + previousBottom + barTop
                 template.frame:SetPoint("TOP", previous, "BOTTOM", 0, -gap)
+                total = total + gap
             end
 
             template.frame:Show()
+            total = total + barHeight
             previous = template.frame
-            shown = shown + 1
+            previousBottom = barBottom
         end
     end
 
-    frame:SetSize(width, height * shown + gap * (shown - 1))
+    frame:SetSize(width, math.max(total, 1))
     frame:EnableMouse(not locked)
 end
 
@@ -310,7 +392,6 @@ function PersonalResource:HasPet()
     if not UnitExists(unit) then return false end
     if UnitIsDead(unit) then return false end
     if UnitHealthMax(unit) <= 0 then return false end
-
     return true
 end
 
@@ -318,7 +399,6 @@ function PersonalResource:UpdatePetFrames()
     oldPetState = PersonalResource:HasPet()
     if not oldPetState then
         petFrame:Hide()
-
         return
     end
 
@@ -400,6 +480,7 @@ function PersonalResource:UpdateAll()
     PersonalResource:UpdatePower()
     PersonalResource:UpdateMana()
     PersonalResource:UpdatePowerType()
+    PersonalResource:UpdateComboPoints()
     PersonalResource:UpdatePet()
 end
 
@@ -438,6 +519,11 @@ shapeshiftFrame:SetScript("OnEvent", function(self, event, ...)
 end)
 
 PersonalResource:RegisterEvent(shapeshiftFrame, "UPDATE_SHAPESHIFT_FORM")
+local comboEventFrame = CreateFrame("Frame")
+comboEventFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateComboPoints() end)
+PersonalResource:RegisterEvent(comboEventFrame, "UNIT_COMBO_POINTS", "player")
+PersonalResource:RegisterEvent(comboEventFrame, "UNIT_POWER_UPDATE", "player")
+PersonalResource:RegisterEvent(comboEventFrame, "PLAYER_TARGET_CHANGED")
 local petHealthFrame = CreateFrame("Frame")
 petHealthFrame:SetScript("OnEvent", function(self, event, ...)
     if PersonalResource:HasPet() ~= oldPetState then
@@ -468,7 +554,7 @@ PersonalResource:RegisterEvent(petStateFrame, "PLAYER_ENTERING_WORLD")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.1.10")
+    PersonalResource:SetVersion(136075, "0.2.0")
     PersonalResourceG = PersonalResourceG or {}
     PersonalResource:InitSettings()
     PersonalResource:UpdateAll()
