@@ -1,11 +1,16 @@
 -- frFR Français French
 local _, PersonalResource = ...
+PersonalResource:AddTrans("frFR", "LID_BARORDER", "Ordre des barres")
 PersonalResource:AddTrans("frFR", "LID_BARS", "Barres")
+PersonalResource:AddTrans("frFR", "LID_BARSLOT1", "Position 1")
+PersonalResource:AddTrans("frFR", "LID_BARSLOT2", "Position 2")
+PersonalResource:AddTrans("frFR", "LID_BARSLOT3", "Position 3")
 PersonalResource:AddTrans("frFR", "LID_COLORS", "Couleurs")
 PersonalResource:AddTrans("frFR", "LID_GENERAL", "Général")
 PersonalResource:AddTrans("frFR", "LID_HEALTH", "Santé")
 PersonalResource:AddTrans("frFR", "LID_HEIGHT", "Hauteur")
 PersonalResource:AddTrans("frFR", "LID_LOCKED", "Verrouillé")
+PersonalResource:AddTrans("frFR", "LID_MANA", "Mana")
 PersonalResource:AddTrans("frFR", "LID_MMBTN", "Afficher le bouton de la minicarte")
 PersonalResource:AddTrans("frFR", "LID_POWER", "Ressource")
 PersonalResource:AddTrans("frFR", "LID_SHOWHEALTHPERCENTAGE", "Afficher le pourcentage de santé")

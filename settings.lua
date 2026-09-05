@@ -3,6 +3,23 @@ local _, PersonalResource = ...
 local prset = nil
 local DEFAULT_WIDTH = 420
 local DEFAULT_HEIGHT = 400
+local BARKEYS = {"HEALTH", "POWER", "MANA"}
+local BARCHOICES = {
+    {
+        ["value"] = "HEALTH",
+        ["label"] = "LID_HEALTH"
+    },
+    {
+        ["value"] = "POWER",
+        ["label"] = "LID_POWER"
+    },
+    {
+        ["value"] = "MANA",
+        ["label"] = "LID_MANA"
+    }
+}
+
+local barSlots = {}
 function PersonalResource:ToggleSettings()
     if prset == nil then return end
     prset:Toggle()
@@ -63,6 +80,34 @@ local function AddSlider(key, dbkey, default, vmin, vmax, step, decimals, func)
     })
 end
 
+local function GetBarSlot(index)
+    return PersonalResource:GV(PersonalResourceG, "BARSLOT" .. index, BARKEYS[index])
+end
+
+local function SetBarSlot(index, value)
+    local old = GetBarSlot(index)
+    if old == value then return end
+    for i = 1, 3 do
+        if i ~= index and GetBarSlot(i) == value then
+            PersonalResource:SV(PersonalResourceG, "BARSLOT" .. i, old)
+            if barSlots[i] then barSlots[i]:SetValue(old) end
+        end
+    end
+
+    PersonalResource:SV(PersonalResourceG, "BARSLOT" .. index, value)
+    PersonalResource:UpdateAll()
+end
+
+local function AddBarSlot(index)
+    barSlots[index] = prset:AddDropdown({
+        ["label"] = "LID_BARSLOT" .. index,
+        ["search"] = "BARSLOT" .. index,
+        ["value"] = GetBarSlot(index),
+        ["choices"] = BARCHOICES,
+        ["func"] = function(value) SetBarSlot(index, value) end
+    })
+end
+
 function PersonalResource:InitSettings()
     PersonalResourceG = PersonalResourceG or {}
     prset = PersonalResource:CreateUIWindow({
@@ -97,6 +142,10 @@ function PersonalResource:InitSettings()
     AddSlider("WIDTH", "BARWIDTH", 200, 40, 400, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("HEIGHT", "BARHEIGHT", 19, 4, 64, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("SPACING", "BARSPACING", 0, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
+    AddCategory("BARORDER", 2)
+    AddBarSlot(1)
+    AddBarSlot(2)
+    AddBarSlot(3)
     AddCategory("TEXT")
     AddCategory("HEALTH", 2)
     AddCheckbox("SHOWHEALTHVALUE", "SHOWHEALTHVALUE", true, function() PersonalResource:UpdateAll() end)

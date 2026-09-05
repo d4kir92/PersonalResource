@@ -1,11 +1,16 @@
 -- ruRU Русский Russian
 local _, PersonalResource = ...
+PersonalResource:AddTrans("ruRU", "LID_BARORDER", "Порядок полос")
 PersonalResource:AddTrans("ruRU", "LID_BARS", "Полосы")
+PersonalResource:AddTrans("ruRU", "LID_BARSLOT1", "Позиция 1")
+PersonalResource:AddTrans("ruRU", "LID_BARSLOT2", "Позиция 2")
+PersonalResource:AddTrans("ruRU", "LID_BARSLOT3", "Позиция 3")
 PersonalResource:AddTrans("ruRU", "LID_COLORS", "Цвета")
 PersonalResource:AddTrans("ruRU", "LID_GENERAL", "Общее")
 PersonalResource:AddTrans("ruRU", "LID_HEALTH", "Здоровье")
 PersonalResource:AddTrans("ruRU", "LID_HEIGHT", "Высота")
 PersonalResource:AddTrans("ruRU", "LID_LOCKED", "Заблокировано")
+PersonalResource:AddTrans("ruRU", "LID_MANA", "Мана")
 PersonalResource:AddTrans("ruRU", "LID_MMBTN", "Показывать кнопку на миникарте")
 PersonalResource:AddTrans("ruRU", "LID_POWER", "Ресурс")
 PersonalResource:AddTrans("ruRU", "LID_SHOWHEALTHPERCENTAGE", "Показывать процент здоровья")

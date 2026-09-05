@@ -1,11 +1,16 @@
 -- esES Español Spanish
 local _, PersonalResource = ...
+PersonalResource:AddTrans("esES", "LID_BARORDER", "Orden de las barras")
 PersonalResource:AddTrans("esES", "LID_BARS", "Barras")
+PersonalResource:AddTrans("esES", "LID_BARSLOT1", "Posición 1")
+PersonalResource:AddTrans("esES", "LID_BARSLOT2", "Posición 2")
+PersonalResource:AddTrans("esES", "LID_BARSLOT3", "Posición 3")
 PersonalResource:AddTrans("esES", "LID_COLORS", "Colores")
 PersonalResource:AddTrans("esES", "LID_GENERAL", "General")
 PersonalResource:AddTrans("esES", "LID_HEALTH", "Salud")
 PersonalResource:AddTrans("esES", "LID_HEIGHT", "Altura")
 PersonalResource:AddTrans("esES", "LID_LOCKED", "Bloqueado")
+PersonalResource:AddTrans("esES", "LID_MANA", "Maná")
 PersonalResource:AddTrans("esES", "LID_MMBTN", "Mostrar botón del minimapa")
 PersonalResource:AddTrans("esES", "LID_POWER", "Recurso")
 PersonalResource:AddTrans("esES", "LID_SHOWHEALTHPERCENTAGE", "Mostrar porcentaje de salud")

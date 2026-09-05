@@ -3,6 +3,8 @@ local oldPowerType = nil
 local oldShapeshift = nil
 local LOWHEALTHPCT = 0.35
 local GRIDSIZE = 5
+local MANAPOWERTYPE = 0
+local BARKEYS = {"HEALTH", "POWER", "MANA"}
 local function GetCfg(key, default)
     PersonalResourceG = PersonalResourceG or {}
     return PersonalResource:GV(PersonalResourceG, key, default)
@@ -106,6 +108,48 @@ local powerRightText = powerTemplate.rightText
 powerLeftText:SetTextColor(1, 1, 1, 1)
 powerCenterText:SetTextColor(1, 1, 1, 1)
 powerRightText:SetTextColor(1, 1, 1, 1)
+local manaTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
+manaTemplate.frame:SetPoint("TOP", powerTemplate.frame, "BOTTOM", 0, -5)
+manaTemplate.frame:Hide()
+local manaBar = manaTemplate.statusBar
+manaTemplate.leftText:SetTextColor(1, 1, 1, 1)
+manaTemplate.centerText:SetTextColor(1, 1, 1, 1)
+manaTemplate.rightText:SetTextColor(1, 1, 1, 1)
+local barTemplates = {
+    ["HEALTH"] = hpTemplate,
+    ["POWER"] = powerTemplate,
+    ["MANA"] = manaTemplate
+}
+
+function PersonalResource:HasSecondaryMana()
+    local unit = "player"
+    if not UnitExists(unit) then return false end
+    if UnitPowerType(unit) == MANAPOWERTYPE then return false end
+    return UnitPowerMax(unit, MANAPOWERTYPE) > 0
+end
+
+function PersonalResource:GetBarOrder()
+    local order = {}
+    local used = {}
+    for i = 1, 3 do
+        local key = GetCfg("BARSLOT" .. i, BARKEYS[i])
+        if barTemplates[key] and not used[key] then
+            used[key] = true
+            table.insert(order, key)
+        end
+    end
+
+    for i = 1, 3 do
+        local key = BARKEYS[i]
+        if not used[key] then
+            used[key] = true
+            table.insert(order, key)
+        end
+    end
+
+    return order
+end
+
 function PersonalResource:UpdateFrames()
     local width = GetCfg("BARWIDTH", 200)
     local height = GetCfg("BARHEIGHT", 19)
@@ -113,12 +157,30 @@ function PersonalResource:UpdateFrames()
     local locked = GetCfg("LOCKED", false)
     local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
     local gap = spacing + overTop + overBottom
-    frame:SetSize(width, height * 2 + gap)
+    local showMana = PersonalResource:HasSecondaryMana()
+    local previous = nil
+    local shown = 0
+    for _, key in ipairs(PersonalResource:GetBarOrder()) do
+        local template = barTemplates[key]
+        if key == "MANA" and not showMana then
+            template.frame:Hide()
+        else
+            PersonalResource:SetUnitFrameSize(template, width, height)
+            template.frame:ClearAllPoints()
+            if previous == nil then
+                template.frame:SetPoint("TOP", frame, "TOP", 0, 0)
+            else
+                template.frame:SetPoint("TOP", previous, "BOTTOM", 0, -gap)
+            end
+
+            template.frame:Show()
+            previous = template.frame
+            shown = shown + 1
+        end
+    end
+
+    frame:SetSize(width, height * shown + gap * (shown - 1))
     frame:EnableMouse(not locked)
-    PersonalResource:SetUnitFrameSize(hpTemplate, width, height)
-    PersonalResource:SetUnitFrameSize(powerTemplate, width, height)
-    powerTemplate.frame:ClearAllPoints()
-    powerTemplate.frame:SetPoint("TOP", hpTemplate.frame, "BOTTOM", 0, -gap)
 end
 
 function PersonalResource:UpdateHealth()
@@ -163,6 +225,21 @@ function PersonalResource:UpdatePower()
     end
 end
 
+function PersonalResource:UpdateMana()
+    local unit = "player"
+    if UnitExists(unit) and UnitIsConnected(unit) then
+        local mana = UnitPower(unit, MANAPOWERTYPE)
+        local maxMana = UnitPowerMax(unit, MANAPOWERTYPE)
+        manaBar:SetMinMaxValues(0, maxMana)
+        manaBar:SetValue(mana)
+        local percent = 0
+        if maxMana > 0 then percent = math.floor((mana / maxMana) * 100) end
+        local percentText = ""
+        if GetCfg("SHOWPOWERPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
+        SetBarTexts(manaTemplate, percentText, BuildValueText(mana, maxMana, GetCfg("SHOWPOWERVALUE", true), GetCfg("SHOWMAXPOWERVALUE", false)))
+    end
+end
+
 function PersonalResource:UpdatePowerType()
     local unit = "player"
     if UnitExists(unit) and UnitIsConnected(unit) then
@@ -182,6 +259,13 @@ function PersonalResource:UpdatePowerType()
 
             powerBar:SetStatusBarColor(r, g, b, 1.0)
         end
+
+        if PowerBarColor and PowerBarColor[MANAPOWERTYPE] then
+            local color = PowerBarColor[MANAPOWERTYPE]
+            manaBar:SetStatusBarColor(color.r, color.g, color.b, 1.0)
+        else
+            manaBar:SetStatusBarColor(0.0, 0.0, 1.0, 1.0)
+        end
     end
 end
 
@@ -189,6 +273,7 @@ function PersonalResource:UpdateAll()
     PersonalResource:UpdateFrames()
     PersonalResource:UpdateHealth()
     PersonalResource:UpdatePower()
+    PersonalResource:UpdateMana()
     PersonalResource:UpdatePowerType()
 end
 
@@ -197,9 +282,17 @@ healthFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:Upd
 PersonalResource:RegisterEvent(healthFrame, "UNIT_HEALTH", "player")
 PersonalResource:RegisterEvent(healthFrame, "UNIT_MAXHEALTH", "player")
 local powerFrame = CreateFrame("Frame")
-powerFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdatePower() end)
+powerFrame:SetScript("OnEvent", function(self, event, ...)
+    PersonalResource:UpdatePower()
+    PersonalResource:UpdateMana()
+    if event == "UNIT_MAXPOWER" then PersonalResource:UpdateFrames() end
+end)
+
 PersonalResource:RegisterEvent(powerFrame, "UNIT_POWER_UPDATE", "player")
 PersonalResource:RegisterEvent(powerFrame, "UNIT_MAXPOWER", "player")
+local displayPowerFrame = CreateFrame("Frame")
+displayPowerFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateAll() end)
+PersonalResource:RegisterEvent(displayPowerFrame, "UNIT_DISPLAYPOWER", "player")
 local powerTypFrame = CreateFrame("Frame")
 powerTypFrame:SetScript("OnEvent", function(self, event, a1, a2)
     if a2 ~= oldPowerType then
@@ -214,7 +307,7 @@ shapeshiftFrame:SetScript("OnEvent", function(self, event, ...)
     local form = GetShapeshiftForm()
     if oldShapeshift ~= form then
         oldShapeshift = form
-        C_Timer.After(0.2, function() PersonalResource:UpdatePowerType() end)
+        C_Timer.After(0.2, function() PersonalResource:UpdateAll() end)
     end
 end)
 

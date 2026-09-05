@@ -1,11 +1,16 @@
 -- deDE Deutsch German
 local _, PersonalResource = ...
+PersonalResource:AddTrans("deDE", "LID_BARORDER", "Reihenfolge der Leisten")
 PersonalResource:AddTrans("deDE", "LID_BARS", "Leisten")
+PersonalResource:AddTrans("deDE", "LID_BARSLOT1", "Position 1")
+PersonalResource:AddTrans("deDE", "LID_BARSLOT2", "Position 2")
+PersonalResource:AddTrans("deDE", "LID_BARSLOT3", "Position 3")
 PersonalResource:AddTrans("deDE", "LID_COLORS", "Farben")
 PersonalResource:AddTrans("deDE", "LID_GENERAL", "Allgemein")
 PersonalResource:AddTrans("deDE", "LID_HEALTH", "Gesundheit")
 PersonalResource:AddTrans("deDE", "LID_HEIGHT", "Höhe")
 PersonalResource:AddTrans("deDE", "LID_LOCKED", "Gesperrt")
+PersonalResource:AddTrans("deDE", "LID_MANA", "Mana")
 PersonalResource:AddTrans("deDE", "LID_MMBTN", "Minimapknopf anzeigen")
 PersonalResource:AddTrans("deDE", "LID_POWER", "Ressource")
 PersonalResource:AddTrans("deDE", "LID_SHOWHEALTHPERCENTAGE", "Gesundheit in Prozent anzeigen")

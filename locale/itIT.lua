@@ -1,11 +1,16 @@
 -- itIT Italiano Italian
 local _, PersonalResource = ...
+PersonalResource:AddTrans("itIT", "LID_BARORDER", "Ordine delle barre")
 PersonalResource:AddTrans("itIT", "LID_BARS", "Barre")
+PersonalResource:AddTrans("itIT", "LID_BARSLOT1", "Posizione 1")
+PersonalResource:AddTrans("itIT", "LID_BARSLOT2", "Posizione 2")
+PersonalResource:AddTrans("itIT", "LID_BARSLOT3", "Posizione 3")
 PersonalResource:AddTrans("itIT", "LID_COLORS", "Colori")
 PersonalResource:AddTrans("itIT", "LID_GENERAL", "Generale")
 PersonalResource:AddTrans("itIT", "LID_HEALTH", "Salute")
 PersonalResource:AddTrans("itIT", "LID_HEIGHT", "Altezza")
 PersonalResource:AddTrans("itIT", "LID_LOCKED", "Bloccato")
+PersonalResource:AddTrans("itIT", "LID_MANA", "Mana")
 PersonalResource:AddTrans("itIT", "LID_MMBTN", "Mostra pulsante minimappa")
 PersonalResource:AddTrans("itIT", "LID_POWER", "Risorsa")
 PersonalResource:AddTrans("itIT", "LID_SHOWHEALTHPERCENTAGE", "Mostra percentuale salute")
