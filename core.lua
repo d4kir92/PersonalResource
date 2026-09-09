@@ -10,7 +10,7 @@ local ENERGYPOWERTYPE = 3
 local COMBOPOWERTYPE = 4
 local BARKEYS = {"HEALTH", "POWER", "MANA", "COMBO"}
 local PETBARKEYS = {"HEALTH", "POWER"}
-local VISIBILITYKEYS = {"SHOWONHOVER", "HIDEWHENFULLHP", "HIDEWHENFULLMANA", "PETSHOWONHOVER", "PETHIDEWHENFULLHP", "PETHIDEWHENFULLMANA"}
+local HIDEWHENFULLKEYS = {"HIDEWHENFULLHP", "HIDEWHENFULLPOWER", "PETHIDEWHENFULLHP", "PETHIDEWHENFULLPOWER"}
 local function GetCfg(key, default)
     PersonalResourceG = PersonalResourceG or {}
     return PersonalResource:GV(PersonalResourceG, key, default)
@@ -529,30 +529,25 @@ local function ShouldHideWhenFull(healthKey, powerKey, healthFull, powerFull)
 end
 
 local function GetVisibilityAlpha(target, showOnHover, hideWhenFull)
-    if showOnHover then
-        if IsHovered(target) then return 1 end
-        return 0
-    end
-
-    if hideWhenFull then return 0 end
-    return 1
+    if not hideWhenFull then return 1 end
+    if showOnHover and IsHovered(target) then return 1 end
+    return 0
 end
 
 local function NeedsVisibilityUpdates()
-    for i = 1, #VISIBILITYKEYS do
-        if GetCfg(VISIBILITYKEYS[i], false) then return true end
+    for i = 1, #HIDEWHENFULLKEYS do
+        if GetCfg(HIDEWHENFULLKEYS[i], false) then return true end
     end
-
     return false
 end
 
 function PersonalResource:UpdateVisibility()
     local locked = GetCfg("LOCKED", false)
-    local hideFull = ShouldHideWhenFull("HIDEWHENFULLHP", "HIDEWHENFULLMANA", IsPlayerHealthFull(), IsPlayerPowerFull())
+    local hideFull = ShouldHideWhenFull("HIDEWHENFULLHP", "HIDEWHENFULLPOWER", IsPlayerHealthFull(), IsPlayerPowerFull())
     local alpha = GetVisibilityAlpha(frame, GetCfg("SHOWONHOVER", false), hideFull)
     frame:SetAlpha(alpha)
     frame:EnableMouse(not locked and alpha > 0)
-    local petHideFull = ShouldHideWhenFull("PETHIDEWHENFULLHP", "PETHIDEWHENFULLMANA", IsFull(UnitHealth("pet"), UnitHealthMax("pet")), IsFull(UnitPower("pet"), UnitPowerMax("pet")))
+    local petHideFull = ShouldHideWhenFull("PETHIDEWHENFULLHP", "PETHIDEWHENFULLPOWER", IsFull(UnitHealth("pet"), UnitHealthMax("pet")), IsFull(UnitPower("pet"), UnitPowerMax("pet")))
     local petAlpha = GetVisibilityAlpha(petFrame, GetCfg("PETSHOWONHOVER", false), petHideFull)
     petFrame:SetAlpha(petAlpha)
     petFrame:EnableMouse(not locked and petAlpha > 0)
@@ -651,7 +646,7 @@ PersonalResource:RegisterEvent(petStateFrame, "PLAYER_ENTERING_WORLD")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.2.1")
+    PersonalResource:SetVersion(136075, "0.2.2")
     PersonalResourceG = PersonalResourceG or {}
     PersonalResource:InitSettings()
     PersonalResource:UpdateAll()

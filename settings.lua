@@ -82,7 +82,7 @@ local function AddCategory(key, level)
 end
 
 local function AddCheckbox(key, dbkey, default, func)
-    prset:AddCheckbox({
+    return prset:AddCheckbox({
         ["label"] = "LID_" .. key,
         ["search"] = key,
         ["value"] = PersonalResource:GV(PersonalResourceG, dbkey, default),
@@ -107,6 +107,32 @@ local function AddSlider(key, dbkey, default, vmin, vmax, step, decimals, func)
             if func then func(value) end
         end
     })
+end
+
+local hoverCheckboxes = {}
+local function UpdateHoverCheckbox(prefix)
+    local cb = hoverCheckboxes[prefix]
+    if cb == nil then return end
+    local enabled = PersonalResource:GV(PersonalResourceG, prefix .. "HIDEWHENFULLHP", false) == true or PersonalResource:GV(PersonalResourceG, prefix .. "HIDEWHENFULLPOWER", false) == true
+    cb:SetEnabled(enabled)
+    if enabled then
+        cb.Label:SetTextColor(1, 0.82, 0, 1)
+    else
+        cb.Label:SetTextColor(0.5, 0.5, 0.5, 1)
+    end
+end
+
+local function AddVisibilityOptions(prefix)
+    hoverCheckboxes[prefix] = AddCheckbox(prefix .. "SHOWONHOVER", prefix .. "SHOWONHOVER", false, function() PersonalResource:UpdateAll() end)
+    AddCheckbox(prefix .. "HIDEWHENFULLHP", prefix .. "HIDEWHENFULLHP", false, function()
+        UpdateHoverCheckbox(prefix)
+        PersonalResource:UpdateAll()
+    end)
+
+    AddCheckbox(prefix .. "HIDEWHENFULLPOWER", prefix .. "HIDEWHENFULLPOWER", false, function()
+        UpdateHoverCheckbox(prefix)
+        PersonalResource:UpdateAll()
+    end)
 end
 
 local function GetBarSlot(prefix, index)
@@ -173,9 +199,7 @@ function PersonalResource:InitSettings()
     AddSlider("HEIGHT", "BARHEIGHT", 19, 4, 64, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("SPACING", "BARSPACING", 0, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
     AddCategory("VISIBILITY", 2)
-    AddCheckbox("SHOWONHOVER", "SHOWONHOVER", false, function() PersonalResource:UpdateAll() end)
-    AddCheckbox("HIDEWHENFULLHP", "HIDEWHENFULLHP", false, function() PersonalResource:UpdateAll() end)
-    AddCheckbox("HIDEWHENFULLMANA", "HIDEWHENFULLMANA", false, function() PersonalResource:UpdateAll() end)
+    AddVisibilityOptions("")
     AddCategory("COMBOPOINTS", 2)
     AddCheckbox("SHOWCOMBOPOINTS", "SHOWCOMBOPOINTS", true, function() PersonalResource:UpdateAll() end)
     AddSlider("COMBOSIZE", "COMBOPOINTSIZE", 20, 6, 48, 1, 0, function() PersonalResource:UpdateAll() end)
@@ -200,9 +224,7 @@ function PersonalResource:InitSettings()
     AddSlider("PETHEIGHT", "PETBARHEIGHT", 14, 4, 64, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("PETSPACING", "PETBARSPACING", 0, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
     AddCategory("PETVISIBILITY", 2)
-    AddCheckbox("PETSHOWONHOVER", "PETSHOWONHOVER", false, function() PersonalResource:UpdateAll() end)
-    AddCheckbox("PETHIDEWHENFULLHP", "PETHIDEWHENFULLHP", false, function() PersonalResource:UpdateAll() end)
-    AddCheckbox("PETHIDEWHENFULLMANA", "PETHIDEWHENFULLMANA", false, function() PersonalResource:UpdateAll() end)
+    AddVisibilityOptions("PET")
     AddCategory("PETBARORDER", 2)
     AddBarSlot("PETBARSLOT", 1)
     AddBarSlot("PETBARSLOT", 2)
@@ -219,6 +241,8 @@ function PersonalResource:InitSettings()
     AddCheckbox("USECLASSCOLOR", "USECLASSCOLOR", true, function() PersonalResource:UpdateAll() end)
     AddCheckbox("SMARTWARNINGCOLORS", "SMARTWARNINGCOLORS", false, function() PersonalResource:UpdateAll() end)
     prset:ResumeLayout()
+    UpdateHoverCheckbox("")
+    UpdateHoverCheckbox("PET")
     PersonalResource:CreateMinimapButton({
         ["name"] = "PersonalResource",
         ["icon"] = 136075,
