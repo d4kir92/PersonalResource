@@ -4,11 +4,13 @@ local oldShapeshift = nil
 local oldPetState = nil
 local LOWHEALTHPCT = 0.35
 local GRIDSIZE = 5
+local VISIBILITYINTERVAL = 0.1
 local MANAPOWERTYPE = 0
 local ENERGYPOWERTYPE = 3
 local COMBOPOWERTYPE = 4
 local BARKEYS = {"HEALTH", "POWER", "MANA", "COMBO"}
 local PETBARKEYS = {"HEALTH", "POWER"}
+local VISIBILITYKEYS = {"SHOWONHOVER", "HIDEWHENFULLHP", "HIDEWHENFULLMANA", "PETSHOWONHOVER", "PETHIDEWHENFULLHP", "PETHIDEWHENFULLMANA"}
 local function GetCfg(key, default)
     PersonalResourceG = PersonalResourceG or {}
     return PersonalResource:GV(PersonalResourceG, key, default)
@@ -266,7 +268,6 @@ function PersonalResource:UpdateFrames()
     local width = GetCfg("BARWIDTH", 200)
     local height = GetCfg("BARHEIGHT", 19)
     local spacing = GetCfg("BARSPACING", 0)
-    local locked = GetCfg("LOCKED", false)
     local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
     local showMana = PersonalResource:HasSecondaryMana()
     local showCombo = PersonalResource:HasComboPoints()
@@ -311,7 +312,6 @@ function PersonalResource:UpdateFrames()
     end
 
     frame:SetSize(width, math.max(total, 1))
-    frame:EnableMouse(not locked)
 end
 
 function PersonalResource:UpdateHealth()
@@ -419,7 +419,6 @@ function PersonalResource:UpdatePetFrames()
     local width = GetCfg("PETBARWIDTH", 150)
     local height = GetCfg("PETBARHEIGHT", 14)
     local spacing = GetCfg("PETBARSPACING", 0)
-    local locked = GetCfg("LOCKED", false)
     local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
     local gap = spacing + overTop + overBottom
     local showPower = UnitPowerMax("pet") > 0
@@ -446,7 +445,6 @@ function PersonalResource:UpdatePetFrames()
     end
 
     petFrame:SetSize(width, math.max(total, 1))
-    petFrame:EnableMouse(not locked)
     petFrame:Show()
 end
 
@@ -494,7 +492,83 @@ function PersonalResource:UpdatePet()
     PersonalResource:UpdatePetFrames()
     PersonalResource:UpdatePetHealth()
     PersonalResource:UpdatePetPower()
+    PersonalResource:UpdateVisibility()
 end
+
+local visibilityFrame = CreateFrame("Frame")
+local visibilityElapsed = 0
+visibilityFrame:Hide()
+local function IsFull(cur, max)
+    if max <= 0 then return true end
+    return cur >= max
+end
+
+local function IsHovered(target)
+    if target.IsMouseOver then return target:IsMouseOver() end
+    if MouseIsOver then return MouseIsOver(target) end
+    return false
+end
+
+local function IsPlayerHealthFull()
+    return IsFull(UnitHealth("player"), UnitHealthMax("player"))
+end
+
+local function IsPlayerPowerFull()
+    if not IsFull(UnitPower("player"), UnitPowerMax("player")) then return false end
+    if PersonalResource:HasSecondaryMana() then return IsFull(UnitPower("player", MANAPOWERTYPE), UnitPowerMax("player", MANAPOWERTYPE)) end
+    return true
+end
+
+local function ShouldHideWhenFull(healthKey, powerKey, healthFull, powerFull)
+    local hideHealth = GetCfg(healthKey, false)
+    local hidePower = GetCfg(powerKey, false)
+    if not hideHealth and not hidePower then return false end
+    if hideHealth and not healthFull then return false end
+    if hidePower and not powerFull then return false end
+    return true
+end
+
+local function GetVisibilityAlpha(target, showOnHover, hideWhenFull)
+    if showOnHover then
+        if IsHovered(target) then return 1 end
+        return 0
+    end
+
+    if hideWhenFull then return 0 end
+    return 1
+end
+
+local function NeedsVisibilityUpdates()
+    for i = 1, #VISIBILITYKEYS do
+        if GetCfg(VISIBILITYKEYS[i], false) then return true end
+    end
+
+    return false
+end
+
+function PersonalResource:UpdateVisibility()
+    local locked = GetCfg("LOCKED", false)
+    local hideFull = ShouldHideWhenFull("HIDEWHENFULLHP", "HIDEWHENFULLMANA", IsPlayerHealthFull(), IsPlayerPowerFull())
+    local alpha = GetVisibilityAlpha(frame, GetCfg("SHOWONHOVER", false), hideFull)
+    frame:SetAlpha(alpha)
+    frame:EnableMouse(not locked and alpha > 0)
+    local petHideFull = ShouldHideWhenFull("PETHIDEWHENFULLHP", "PETHIDEWHENFULLMANA", IsFull(UnitHealth("pet"), UnitHealthMax("pet")), IsFull(UnitPower("pet"), UnitPowerMax("pet")))
+    local petAlpha = GetVisibilityAlpha(petFrame, GetCfg("PETSHOWONHOVER", false), petHideFull)
+    petFrame:SetAlpha(petAlpha)
+    petFrame:EnableMouse(not locked and petAlpha > 0)
+    if NeedsVisibilityUpdates() then
+        visibilityFrame:Show()
+    else
+        visibilityFrame:Hide()
+    end
+end
+
+visibilityFrame:SetScript("OnUpdate", function(self, elapsed)
+    visibilityElapsed = visibilityElapsed + elapsed
+    if visibilityElapsed < VISIBILITYINTERVAL then return end
+    visibilityElapsed = 0
+    PersonalResource:UpdateVisibility()
+end)
 
 function PersonalResource:UpdateAll()
     PersonalResource:UpdateFrames()
@@ -504,6 +578,7 @@ function PersonalResource:UpdateAll()
     PersonalResource:UpdatePowerType()
     PersonalResource:UpdateComboPoints()
     PersonalResource:UpdatePet()
+    PersonalResource:UpdateVisibility()
 end
 
 local healthFrame = CreateFrame("Frame")
