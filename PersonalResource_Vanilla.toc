@@ -1,5 +1,5 @@
 ## Interface: 11509
-## Version: 0.2.2
+## Version: 0.2.3
 ## Title: PersonalResource |T136075:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
 ## Notes: Show Personal Resource Info (Health, Mana, Energy, Rage, ...)
 ## Notes-deDE: Zeigt die persönlichen Resourcen an (Gesundheit, Mana, Energie, Wut, ...)
@@ -13,8 +13,17 @@
 ## Notes-zhCN: 显示个人资源信息(生命值、法力值、能量、怒气等)
 ## Notes-zhTW: 顯示個人資源資訊(生命值、法力值、能量、怒氣等)
 ## Author: D4KiR |T132115:16:16:0:0|t
-## Category: D4KiR |T132115:16:16:0:0|t
-## X-Category: D4KiR |T132115:16:16:0:0|t
+## Category: Unit Frames
+## Category-deDE: Einheitenfenster
+## Category-esES: Marcos de unidades
+## Category-esMX: Marcos de unidades
+## Category-frFR: Portraits d'unités
+## Category-itIT: Riquadri delle unità
+## Category-koKR: 유닛프레임
+## Category-ptBR: Quadros de unidade
+## Category-ruRU: Рамки юнитов
+## Category-zhCN: 单位框体
+## Category-zhTW: 單位框架
 ## DefaultState: enabled
 ## SavedVariables: PersonalResourceG
 ## SavedVariablesPerCharacter: PersonalResourceC

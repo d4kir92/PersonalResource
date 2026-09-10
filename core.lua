@@ -646,7 +646,7 @@ PersonalResource:RegisterEvent(petStateFrame, "PLAYER_ENTERING_WORLD")
 local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event, ...)
     PersonalResource:SetAddonOutput("PersonalResource", 136075)
-    PersonalResource:SetVersion(136075, "0.2.2")
+    PersonalResource:SetVersion(136075, "0.2.3")
     PersonalResourceG = PersonalResourceG or {}
     PersonalResource:InitSettings()
     PersonalResource:UpdateAll()
