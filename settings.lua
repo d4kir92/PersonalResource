@@ -179,7 +179,7 @@ function PersonalResource:InitSettings()
         end,
         ["getCollapsed"] = function(key) return GetCollapsed(key) end,
         ["setCollapsed"] = function(key, collapsed) SetCollapsed(key, collapsed) end,
-        ["title"] = format("|T136075:16:16:0:0|t PersonalResource v%s", PersonalResource:GetVersion())
+        ["title"] = format("|T%s:16:16:0:0|t PersonalResource v%s", PersonalResource:GetAddonIcon(), PersonalResource:GetVersion())
     })
 
     prset:SuspendLayout()
@@ -245,9 +245,9 @@ function PersonalResource:InitSettings()
     UpdateHoverCheckbox("PET")
     PersonalResource:CreateMinimapButton({
         ["name"] = "PersonalResource",
-        ["icon"] = 136075,
+        ["icon"] = PersonalResource:GetAddonIcon(),
         ["dbtab"] = PersonalResourceG,
-        ["vTT"] = {{"|T136075:16:16:0:0|t PersonalResource", "v" .. PersonalResource:GetVersion()}, {PersonalResource:Trans("LID_LEFTCLICK"), PersonalResource:Trans("LID_OPENSETTINGS")}, {PersonalResource:Trans("LID_SHIFTRIGHTCLICK"), PersonalResource:Trans("LID_HIDEMINIMAPBUTTON")}},
+        ["vTT"] = {{format("|T%s:16:16:0:0|t PersonalResource", PersonalResource:GetAddonIcon()),"v" .. PersonalResource:GetVersion()}, {PersonalResource:Trans("LID_LEFTCLICK"), PersonalResource:Trans("LID_OPENSETTINGS")}, {PersonalResource:Trans("LID_SHIFTRIGHTCLICK"), PersonalResource:Trans("LID_HIDEMINIMAPBUTTON")}},
         ["funcL"] = function() PersonalResource:ToggleSettings() end,
         ["funcSR"] = function()
             PersonalResource:SV(PersonalResourceG, "MMBTN", false)

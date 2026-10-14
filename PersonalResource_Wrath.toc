@@ -1,6 +1,6 @@
 ## Interface: 38002, 30403
-## Version: 0.2.6
-## Title: PersonalResource |T136075:16:16:0:0|t by |cff55d2ffD4KiR |T132115:16:16:0:0|t
+## Version: 0.2.7
+## Title: PersonalResource by |cff55d2ffD4KiR |T132115:16:16:0:0|t
 ## Notes: Show Personal Resource Info (Health, Mana, Energy, Rage, ...)
 ## Notes-deDE: Zeigt die persönlichen Resourcen an (Gesundheit, Mana, Energie, Wut, ...)
 ## Notes-esES: Muestra información de recursos personales (Salud, Maná, Energía, Furia, ...)
