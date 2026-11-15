@@ -16,27 +16,46 @@ local function GetCfg(key, default)
     return PersonalResource:GV(PersonalResourceG, key, default)
 end
 
-local function BuildValueText(cur, max, showValue, showMax)
-    if showValue and showMax then return string.format("%d / %d", cur, max) end
-    if showValue then return string.format("%d", cur) end
-    if showMax then return string.format("%d", max) end
-    return ""
+local function GetResourceFraction(cur, max)
+    if not PersonalResource:CanAccessValues(cur, max) then return nil end
+    if max <= 0 then return 0 end
+    return cur / max
 end
 
-local function SetBarTexts(template, percentText, valueText)
-    if percentText ~= "" and valueText ~= "" then
-        template.leftText:SetText(percentText)
-        template.centerText:SetText("")
-        template.rightText:SetText(valueText)
-    elseif percentText ~= "" then
-        template.leftText:SetText("")
-        template.centerText:SetText(percentText)
-        template.rightText:SetText("")
+local function SetBarTexts(template, showPercent, percent, showValue, showMax, cur, max)
+    if showPercent then
+        template.leftText:SetFormattedText("%d%%", percent)
     else
         template.leftText:SetText("")
-        template.centerText:SetText(valueText)
+    end
+
+    if showValue and showMax then
+        template.rightText:SetFormattedText("%d / %d", cur, max)
+    elseif showValue then
+        template.rightText:SetFormattedText("%d", cur)
+    elseif showMax then
+        template.rightText:SetFormattedText("%d", max)
+    else
         template.rightText:SetText("")
     end
+end
+
+local function GetHealthTextPercent(unit, enabled, fraction)
+    if not enabled then return false, 0 end
+    if fraction then return true, fraction * 100 end
+    if UnitHealthPercent and CurveConstants and CurveConstants.ScaleTo100 then
+        return true, UnitHealthPercent(unit, true, CurveConstants.ScaleTo100)
+    end
+    return false, 0
+end
+
+local function GetPowerTextPercent(unit, enabled, fraction, powerType)
+    if not enabled then return false, 0 end
+    if fraction then return true, fraction * 100 end
+    if UnitPowerPercent and CurveConstants and CurveConstants.ScaleTo100 then
+        return true, UnitPowerPercent(unit, powerType, false, CurveConstants.ScaleTo100)
+    end
+    return false, 0
 end
 
 local gridFrame = nil
@@ -119,26 +138,21 @@ local hpTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
 hpTemplate.frame:SetPoint("TOP", frame, "TOP", 0, 0)
 local hpBar = hpTemplate.statusBar
 local hpLeftText = hpTemplate.leftText
-local hpCenterText = hpTemplate.centerText
 local hpRightText = hpTemplate.rightText
 hpLeftText:SetTextColor(1, 1, 1, 1)
-hpCenterText:SetTextColor(1, 1, 1, 1)
 hpRightText:SetTextColor(1, 1, 1, 1)
 local powerTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
 powerTemplate.frame:SetPoint("TOP", hpTemplate.frame, "BOTTOM", 0, -5)
 local powerBar = powerTemplate.statusBar
 local powerLeftText = powerTemplate.leftText
-local powerCenterText = powerTemplate.centerText
 local powerRightText = powerTemplate.rightText
 powerLeftText:SetTextColor(1, 1, 1, 1)
-powerCenterText:SetTextColor(1, 1, 1, 1)
 powerRightText:SetTextColor(1, 1, 1, 1)
 local manaTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
 manaTemplate.frame:SetPoint("TOP", powerTemplate.frame, "BOTTOM", 0, -5)
 manaTemplate.frame:Hide()
 local manaBar = manaTemplate.statusBar
 manaTemplate.leftText:SetTextColor(1, 1, 1, 1)
-manaTemplate.centerText:SetTextColor(1, 1, 1, 1)
 manaTemplate.rightText:SetTextColor(1, 1, 1, 1)
 local comboFrame = CreateFrame("Frame", nil, frame)
 comboFrame:SetSize(200, 20)
@@ -158,13 +172,11 @@ local petHPTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(petFrame, 15
 petHPTemplate.frame:SetPoint("TOP", petFrame, "TOP", 0, 0)
 local petHPBar = petHPTemplate.statusBar
 petHPTemplate.leftText:SetTextColor(1, 1, 1, 1)
-petHPTemplate.centerText:SetTextColor(1, 1, 1, 1)
 petHPTemplate.rightText:SetTextColor(1, 1, 1, 1)
 local petPowerTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(petFrame, 150, 14)
 petPowerTemplate.frame:SetPoint("TOP", petHPTemplate.frame, "BOTTOM", 0, -5)
 local petPowerBar = petPowerTemplate.statusBar
 petPowerTemplate.leftText:SetTextColor(1, 1, 1, 1)
-petPowerTemplate.centerText:SetTextColor(1, 1, 1, 1)
 petPowerTemplate.rightText:SetTextColor(1, 1, 1, 1)
 local petBarTemplates = {
     ["HEALTH"] = petHPTemplate,
@@ -175,18 +187,19 @@ function PersonalResource:HasSecondaryMana()
     local unit = "player"
     if not UnitExists(unit) then return false end
     if UnitPowerType(unit) == MANAPOWERTYPE then return false end
-    return UnitPowerMax(unit, MANAPOWERTYPE) > 0
+    local maxMana = UnitPowerMax(unit, MANAPOWERTYPE)
+    return not PersonalResource:CanAccessValue(maxMana) or maxMana > 0
 end
 
 local function GetMaxComboPoints()
-    local maxPoints = UnitPowerMax("player", COMBOPOWERTYPE) or 0
-    if maxPoints <= 0 then maxPoints = MAX_COMBO_POINTS or 5 end
+    local maxPoints = UnitPowerMax("player", COMBOPOWERTYPE)
+    if not PersonalResource:CanAccessValue(maxPoints) or not maxPoints or maxPoints <= 0 then maxPoints = MAX_COMBO_POINTS or 5 end
     return maxPoints
 end
 
 local function GetCurrentComboPoints()
-    if GetComboPoints then return GetComboPoints("player", "target") or 0 end
-    return UnitPower("player", COMBOPOWERTYPE) or 0
+    if GetComboPoints and not PersonalResource:IsForever() then return GetComboPoints("player", "target") end
+    return UnitPower("player", COMBOPOWERTYPE)
 end
 
 local function EnsureComboPoints(count)
@@ -259,8 +272,9 @@ end
 function PersonalResource:UpdateComboPoints()
     if not PersonalResource:HasComboPoints() then return end
     local value = GetCurrentComboPoints()
+    local readable = PersonalResource:CanAccessValue(value)
     for i = 1, #comboPoints do
-        PersonalResource:SetComboPointFull(comboPoints[i], i <= value)
+        PersonalResource:SetComboPointFull(comboPoints[i], readable and i <= (value or 0))
     end
 end
 
@@ -321,9 +335,7 @@ function PersonalResource:UpdateHealth()
         local maxHP = UnitHealthMax(unit)
         hpBar:SetMinMaxValues(0, maxHP)
         hpBar:SetValue(hp)
-        local fraction = 0
-        if maxHP > 0 then fraction = hp / maxHP end
-        local percent = math.floor(fraction * 100)
+        local fraction = GetResourceFraction(hp, maxHP)
         local r, g, b = 0.2, 1, 0.2
         if GetCfg("USECLASSCOLOR", true) then
             local _, class = UnitClass(unit)
@@ -333,11 +345,10 @@ function PersonalResource:UpdateHealth()
             end
         end
 
-        if GetCfg("SMARTWARNINGCOLORS", false) and fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
+        if GetCfg("SMARTWARNINGCOLORS", false) and fraction and fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
         hpBar:SetStatusBarColor(r, g, b, 1.0)
-        local percentText = ""
-        if GetCfg("SHOWHEALTHPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
-        SetBarTexts(hpTemplate, percentText, BuildValueText(hp, maxHP, GetCfg("SHOWHEALTHVALUE", true), GetCfg("SHOWMAXHEALTHVALUE", false)))
+        local showPercent, percent = GetHealthTextPercent(unit, GetCfg("SHOWHEALTHPERCENTAGE", true), fraction)
+        SetBarTexts(hpTemplate, showPercent, percent, GetCfg("SHOWHEALTHVALUE", true), GetCfg("SHOWMAXHEALTHVALUE", false), hp, maxHP)
     end
 end
 
@@ -348,11 +359,9 @@ function PersonalResource:UpdatePower()
         local maxPower = UnitPowerMax(unit)
         powerBar:SetMinMaxValues(0, maxPower)
         powerBar:SetValue(power)
-        local percent = 0
-        if maxPower > 0 then percent = math.floor((power / maxPower) * 100) end
-        local percentText = ""
-        if GetCfg("SHOWPOWERPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
-        SetBarTexts(powerTemplate, percentText, BuildValueText(power, maxPower, GetCfg("SHOWPOWERVALUE", true), GetCfg("SHOWMAXPOWERVALUE", false)))
+        local fraction = GetResourceFraction(power, maxPower)
+        local showPercent, percent = GetPowerTextPercent(unit, GetCfg("SHOWPOWERPERCENTAGE", true), fraction)
+        SetBarTexts(powerTemplate, showPercent, percent, GetCfg("SHOWPOWERVALUE", true), GetCfg("SHOWMAXPOWERVALUE", false), power, maxPower)
     end
 end
 
@@ -363,11 +372,9 @@ function PersonalResource:UpdateMana()
         local maxMana = UnitPowerMax(unit, MANAPOWERTYPE)
         manaBar:SetMinMaxValues(0, maxMana)
         manaBar:SetValue(mana)
-        local percent = 0
-        if maxMana > 0 then percent = math.floor((mana / maxMana) * 100) end
-        local percentText = ""
-        if GetCfg("SHOWPOWERPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
-        SetBarTexts(manaTemplate, percentText, BuildValueText(mana, maxMana, GetCfg("SHOWPOWERVALUE", true), GetCfg("SHOWMAXPOWERVALUE", false)))
+        local fraction = GetResourceFraction(mana, maxMana)
+        local showPercent, percent = GetPowerTextPercent(unit, GetCfg("SHOWPOWERPERCENTAGE", true), fraction, MANAPOWERTYPE)
+        SetBarTexts(manaTemplate, showPercent, percent, GetCfg("SHOWPOWERVALUE", true), GetCfg("SHOWMAXPOWERVALUE", false), mana, maxMana)
     end
 end
 
@@ -404,9 +411,10 @@ function PersonalResource:HasPet()
     local unit = "pet"
     if not GetCfg("SHOWPETFRAME", true) then return false end
     if not UnitExists(unit) then return false end
-    if UnitIsDead(unit) then return false end
-    if UnitHealthMax(unit) <= 0 then return false end
-    return true
+    local dead = UnitIsDead(unit)
+    if PersonalResource:CanAccessValue(dead) and dead then return false end
+    local maxHealth = UnitHealthMax(unit)
+    return not PersonalResource:CanAccessValue(maxHealth) or maxHealth > 0
 end
 
 function PersonalResource:UpdatePetFrames()
@@ -421,7 +429,8 @@ function PersonalResource:UpdatePetFrames()
     local spacing = GetCfg("PETBARSPACING", 0)
     local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
     local gap = spacing + overTop + overBottom
-    local showPower = UnitPowerMax("pet") > 0
+    local maxPower = UnitPowerMax("pet")
+    local showPower = not PersonalResource:CanAccessValue(maxPower) or maxPower > 0
     local previous = nil
     local total = 0
     for _, key in ipairs(PersonalResource:GetPetBarOrder()) do
@@ -455,15 +464,12 @@ function PersonalResource:UpdatePetHealth()
     local maxHP = UnitHealthMax(unit)
     petHPBar:SetMinMaxValues(0, maxHP)
     petHPBar:SetValue(hp)
-    local fraction = 0
-    if maxHP > 0 then fraction = hp / maxHP end
-    local percent = math.floor(fraction * 100)
+    local fraction = GetResourceFraction(hp, maxHP)
     local r, g, b = 0.2, 1, 0.2
-    if GetCfg("SMARTWARNINGCOLORS", false) and fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
+    if GetCfg("SMARTWARNINGCOLORS", false) and fraction and fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
     petHPBar:SetStatusBarColor(r, g, b, 1.0)
-    local percentText = ""
-    if GetCfg("SHOWPETHEALTHPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
-    SetBarTexts(petHPTemplate, percentText, BuildValueText(hp, maxHP, GetCfg("SHOWPETHEALTHVALUE", true), GetCfg("SHOWPETMAXHEALTHVALUE", false)))
+    local showPercent, percent = GetHealthTextPercent(unit, GetCfg("SHOWPETHEALTHPERCENTAGE", true), fraction)
+    SetBarTexts(petHPTemplate, showPercent, percent, GetCfg("SHOWPETHEALTHVALUE", true), GetCfg("SHOWPETMAXHEALTHVALUE", false), hp, maxHP)
 end
 
 function PersonalResource:UpdatePetPower()
@@ -473,8 +479,7 @@ function PersonalResource:UpdatePetPower()
     local maxPower = UnitPowerMax(unit)
     petPowerBar:SetMinMaxValues(0, maxPower)
     petPowerBar:SetValue(power)
-    local percent = 0
-    if maxPower > 0 then percent = math.floor((power / maxPower) * 100) end
+    local fraction = GetResourceFraction(power, maxPower)
     local powerType = UnitPowerType(unit)
     if PowerBarColor and PowerBarColor[powerType] then
         local color = PowerBarColor[powerType]
@@ -483,9 +488,8 @@ function PersonalResource:UpdatePetPower()
         petPowerBar:SetStatusBarColor(0.0, 0.0, 1.0, 1.0)
     end
 
-    local percentText = ""
-    if GetCfg("SHOWPETPOWERPERCENTAGE", true) then percentText = string.format("%d%%", percent) end
-    SetBarTexts(petPowerTemplate, percentText, BuildValueText(power, maxPower, GetCfg("SHOWPETPOWERVALUE", true), GetCfg("SHOWPETMAXPOWERVALUE", false)))
+    local showPercent, percent = GetPowerTextPercent(unit, GetCfg("SHOWPETPOWERPERCENTAGE", true), fraction)
+    SetBarTexts(petPowerTemplate, showPercent, percent, GetCfg("SHOWPETPOWERVALUE", true), GetCfg("SHOWPETMAXPOWERVALUE", false), power, maxPower)
 end
 
 function PersonalResource:UpdatePet()
@@ -499,6 +503,7 @@ local visibilityFrame = CreateFrame("Frame")
 local visibilityElapsed = 0
 visibilityFrame:Hide()
 local function IsFull(cur, max)
+    if not PersonalResource:CanAccessValues(cur, max) then return false end
     if max <= 0 then return true end
     return cur >= max
 end
@@ -594,7 +599,7 @@ displayPowerFrame:SetScript("OnEvent", function(self, event, ...) PersonalResour
 PersonalResource:RegisterEvent(displayPowerFrame, "UNIT_DISPLAYPOWER", "player")
 local powerTypFrame = CreateFrame("Frame")
 powerTypFrame:SetScript("OnEvent", function(self, event, a1, a2)
-    if a2 ~= oldPowerType then
+    if PersonalResource:CanAccessValue(a2) and a2 ~= oldPowerType then
         oldPowerType = a2
         PersonalResource:UpdatePowerType()
     end

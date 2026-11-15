@@ -118,18 +118,18 @@ function PersonalResource:CreateBlizzardStyleUnitFrame(parent, width, height)
     local leftText = textFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     leftText:SetPoint("LEFT", textFrame, "LEFT", 4, 0)
     leftText:SetJustifyH("LEFT")
-    local centerText = textFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    centerText:SetPoint("CENTER", textFrame, "CENTER", 0, 0)
-    centerText:SetJustifyH("CENTER")
     local rightText = textFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     rightText:SetPoint("RIGHT", textFrame, "RIGHT", -4, 0)
     rightText:SetJustifyH("RIGHT")
+    for _, text in ipairs({leftText, rightText}) do
+        local font, size = text:GetFont()
+        text:SetFont(font, size, "OUTLINE")
+    end
     return {
         frame = frame,
         statusBar = statusBar,
         textFrame = textFrame,
         leftText = leftText,
-        centerText = centerText,
         rightText = rightText
     }
 end
