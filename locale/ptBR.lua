@@ -1,6 +1,7 @@
 -- ptBR Português (Brasil) Portuguese (Brazil)
 local _, PersonalResource = ...
 PersonalResource:AddTrans("ptBR", "LID_ALTERNATEPOWER", "Poder alternativo")
+PersonalResource:AddTrans("ptBR", "LID_ALWAYSSHOWDRUIDCOMBO", "Sempre mostrar pontos de combo")
 PersonalResource:AddTrans("ptBR", "LID_ALWAYSSHOWDRUIDENERGY", "Sempre mostrar energia")
 PersonalResource:AddTrans("ptBR", "LID_ALWAYSSHOWDRUIDRAGE", "Sempre mostrar raiva")
 PersonalResource:AddTrans("ptBR", "LID_BARORDER", "Ordem das barras")

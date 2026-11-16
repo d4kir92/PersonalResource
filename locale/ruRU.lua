@@ -1,6 +1,7 @@
 -- ruRU Русский Russian
 local _, PersonalResource = ...
 PersonalResource:AddTrans("ruRU", "LID_ALTERNATEPOWER", "Дополнительный ресурс")
+PersonalResource:AddTrans("ruRU", "LID_ALWAYSSHOWDRUIDCOMBO", "Всегда показывать очки серии приёмов")
 PersonalResource:AddTrans("ruRU", "LID_ALWAYSSHOWDRUIDENERGY", "Всегда показывать энергию")
 PersonalResource:AddTrans("ruRU", "LID_ALWAYSSHOWDRUIDRAGE", "Всегда показывать ярость")
 PersonalResource:AddTrans("ruRU", "LID_BARORDER", "Порядок полос")

@@ -1,6 +1,7 @@
 -- zhCN 简体中文 Chinese (Simplified)
 local _, PersonalResource = ...
 PersonalResource:AddTrans("zhCN", "LID_ALTERNATEPOWER", "额外能量")
+PersonalResource:AddTrans("zhCN", "LID_ALWAYSSHOWDRUIDCOMBO", "始终显示连击点")
 PersonalResource:AddTrans("zhCN", "LID_ALWAYSSHOWDRUIDENERGY", "始终显示能量")
 PersonalResource:AddTrans("zhCN", "LID_ALWAYSSHOWDRUIDRAGE", "始终显示怒气")
 PersonalResource:AddTrans("zhCN", "LID_BARORDER", "状态条顺序")

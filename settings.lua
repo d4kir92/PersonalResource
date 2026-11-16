@@ -170,6 +170,9 @@ function PersonalResource:InitSettings()
     end
     AddCategory("COMBOPOINTS", 2)
     AddCheckbox("SHOWCOMBOPOINTS", "SHOWCOMBOPOINTS", true, function() PersonalResource:UpdateAll() end)
+    if PersonalResource:IsDruid() then
+        AddCheckbox("ALWAYSSHOWDRUIDCOMBO", "ALWAYSSHOWDRUIDCOMBO", false, function() PersonalResource:UpdateAll() end)
+    end
     AddSlider("COMBOSIZE", "COMBOPOINTSIZE", 20, 6, 48, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("COMBOSPACING", "COMBOPOINTSPACING", 4, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
     AddCategory("BARORDER", 2)

@@ -1,6 +1,7 @@
 -- esMX Español (México) Spanish (Mexico)
 local _, PersonalResource = ...
 PersonalResource:AddTrans("esMX", "LID_ALTERNATEPOWER", "Poder alternativo")
+PersonalResource:AddTrans("esMX", "LID_ALWAYSSHOWDRUIDCOMBO", "Mostrar siempre los puntos de combo")
 PersonalResource:AddTrans("esMX", "LID_ALWAYSSHOWDRUIDENERGY", "Mostrar siempre la energía")
 PersonalResource:AddTrans("esMX", "LID_ALWAYSSHOWDRUIDRAGE", "Mostrar siempre la ira")
 PersonalResource:AddTrans("esMX", "LID_BARORDER", "Orden de las barras")

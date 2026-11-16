@@ -1,6 +1,7 @@
 -- zhTW 繁體中文 Chinese (Traditional)
 local _, PersonalResource = ...
 PersonalResource:AddTrans("zhTW", "LID_ALTERNATEPOWER", "額外能量")
+PersonalResource:AddTrans("zhTW", "LID_ALWAYSSHOWDRUIDCOMBO", "一律顯示連擊點")
 PersonalResource:AddTrans("zhTW", "LID_ALWAYSSHOWDRUIDENERGY", "一律顯示能量")
 PersonalResource:AddTrans("zhTW", "LID_ALWAYSSHOWDRUIDRAGE", "一律顯示怒氣")
 PersonalResource:AddTrans("zhTW", "LID_BARORDER", "狀態條順序")

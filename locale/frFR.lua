@@ -1,6 +1,7 @@
 -- frFR Français French
 local _, PersonalResource = ...
 PersonalResource:AddTrans("frFR", "LID_ALTERNATEPOWER", "Puissance alternative")
+PersonalResource:AddTrans("frFR", "LID_ALWAYSSHOWDRUIDCOMBO", "Toujours afficher les points de combo")
 PersonalResource:AddTrans("frFR", "LID_ALWAYSSHOWDRUIDENERGY", "Toujours afficher l’énergie")
 PersonalResource:AddTrans("frFR", "LID_ALWAYSSHOWDRUIDRAGE", "Toujours afficher la rage")
 PersonalResource:AddTrans("frFR", "LID_BARORDER", "Ordre des barres")

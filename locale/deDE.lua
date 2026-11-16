@@ -1,6 +1,7 @@
 -- deDE Deutsch German
 local _, PersonalResource = ...
 PersonalResource:AddTrans("deDE", "LID_ALTERNATEPOWER", "Sekundärressource")
+PersonalResource:AddTrans("deDE", "LID_ALWAYSSHOWDRUIDCOMBO", "Kombopunkte immer anzeigen")
 PersonalResource:AddTrans("deDE", "LID_ALWAYSSHOWDRUIDENERGY", "Energie immer anzeigen")
 PersonalResource:AddTrans("deDE", "LID_ALWAYSSHOWDRUIDRAGE", "Wut immer anzeigen")
 PersonalResource:AddTrans("deDE", "LID_BARORDER", "Reihenfolge der Leisten")

@@ -1,6 +1,7 @@
 -- koKR 한국어 Korean
 local _, PersonalResource = ...
 PersonalResource:AddTrans("koKR", "LID_ALTERNATEPOWER", "보조 자원")
+PersonalResource:AddTrans("koKR", "LID_ALWAYSSHOWDRUIDCOMBO", "연계 점수 항상 표시")
 PersonalResource:AddTrans("koKR", "LID_ALWAYSSHOWDRUIDENERGY", "기력 항상 표시")
 PersonalResource:AddTrans("koKR", "LID_ALWAYSSHOWDRUIDRAGE", "분노 항상 표시")
 PersonalResource:AddTrans("koKR", "LID_BARORDER", "바 순서")

@@ -33,6 +33,14 @@ local function AlwaysShowDruidPower()
     return PersonalResource:IsDruid() and (PersonalResource:AlwaysShowDruidResource("ENERGY") or PersonalResource:AlwaysShowDruidResource("RAGE"))
 end
 
+local function DruidComboAlwaysShown()
+    return GetCfg("ALWAYSSHOWDRUIDCOMBO", false) and PersonalResource:IsDruid()
+end
+
+local function ReserveDruidSlot(key)
+    return key ~= "COMBO" or DruidComboAlwaysShown() or GetCfg("SHOWCOMBOPOINTS", true)
+end
+
 local function GetDruidPowerKey(powerType)
     for key, value in pairs(DRUIDPOWERTYPES) do
         if value == powerType then return key end
@@ -162,6 +170,7 @@ end
 local nativeFrame
 local nativeLayoutPending = false
 local nativeDruidPowerActive = false
+local nativeDruidHeight
 local nativeOrderScheduled = false
 local nativeComboFrame
 local nativeTexts = {}
@@ -278,8 +287,9 @@ end
 
 function PersonalResource:HasComboPoints()
     local unit = "player"
-    if not GetCfg("SHOWCOMBOPOINTS", true) then return false end
     if not UnitExists(unit) then return false end
+    if DruidComboAlwaysShown() then return true end
+    if not GetCfg("SHOWCOMBOPOINTS", true) then return false end
     local _, class = UnitClass(unit)
     if class == "ROGUE" then return true end
     if class == "DRUID" then return UnitPowerType(unit) == ENERGYPOWERTYPE end
@@ -344,7 +354,7 @@ function PersonalResource:UpdateComboLayout(width)
 end
 
 function PersonalResource:UpdateComboPoints()
-    if not PersonalResource:HasComboPoints() then return end
+    if not comboFrame or not comboFrame:IsShown() or not PersonalResource:HasComboPoints() then return end
     local value = GetCurrentComboPoints()
     local readable = PersonalResource:CanAccessValue(value)
     for i = 1, #comboPoints do
@@ -357,12 +367,42 @@ local function NativeHasComboPoints()
     return class == "ROGUE" or class == "DRUID"
 end
 
+local function AnimateDruidBar(statusBar, elapsed)
+    local current = statusBar:GetValue()
+    local target = statusBar.personalResourceTarget
+    if not PersonalResource:CanAccessValue(current) then
+        statusBar:SetScript("OnUpdate", nil)
+        statusBar:SetValue(target)
+        return
+    end
+    local difference = target - current
+    local nextValue = current + difference * (1 - math.exp(-elapsed * 18))
+    if math.abs(target - nextValue) < 0.02 then
+        nextValue = target
+        statusBar:SetScript("OnUpdate", nil)
+    end
+    statusBar:SetValue(nextValue)
+end
+
 local function UpdateDruidBarText(bar, powerType)
     local value = UnitPower("player", powerType)
     local maximum = UnitPowerMax("player", powerType)
     if powerType ~= MANAPOWERTYPE and PersonalResource:CanAccessValue(maximum) and maximum <= 0 then maximum = 100 end
-    bar.statusBar:SetMinMaxValues(0, maximum)
-    bar.statusBar:SetValue(value)
+    local statusBar = bar.statusBar
+    local _, previousMax = statusBar:GetMinMaxValues()
+    if not PersonalResource:CanAccessValues(maximum, previousMax) or maximum ~= previousMax then
+        statusBar:SetMinMaxValues(0, maximum)
+    end
+    local interpolation = Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut
+    if interpolation then
+        statusBar:SetValue(value, interpolation)
+    elseif PersonalResource:CanAccessValues(value, statusBar:GetValue()) then
+        statusBar.personalResourceTarget = value
+        statusBar:SetScript("OnUpdate", AnimateDruidBar)
+    else
+        statusBar:SetScript("OnUpdate", nil)
+        statusBar:SetValue(value)
+    end
     local showPercent, percent = GetPowerTextPercent("player", GetCfg("SHOWPOWERPERCENTAGE", true), GetResourceFraction(value, maximum), powerType)
     SetBarTexts(bar, showPercent, percent, GetCfg("SHOWPOWERVALUE", true), GetCfg("SHOWMAXPOWERVALUE", false), value, maximum)
 end
@@ -410,7 +450,10 @@ local function UpdateNativeOrder()
         COMBO = nativeFrame.ClassFrameContainer
     }
     local classBar = bars.COMBO
-    if PersonalResource:IsDruid() then
+    local druid = PersonalResource:IsDruid()
+    local overflowPower
+    local slotHeight = GetCfg("BARHEIGHT", 19)
+    if druid then
         local primaryType = UnitPowerType("player")
         local primaryKey = GetDruidPowerKey(primaryType) or "COMBO"
         local alternate = bars.MANA
@@ -419,6 +462,20 @@ local function UpdateNativeOrder()
         if alternate then alternate:SetAlpha(duplicateMana and 0 or 1) end
         if not hasAlternate then bars.MANA = nil end
         bars[primaryKey] = bars.POWER
+        local nativeComboShown = classBar and classBar:IsShown() and primaryType == ENERGYPOWERTYPE
+            and (not nativeFrame.HasClassInfo or nativeFrame:HasClassInfo())
+        local showExtraCombo = DruidComboAlwaysShown() and not nativeComboShown
+        if showExtraCombo then
+            if not comboFrame then comboFrame = CreateFrame("Frame", nil, nativeFrame) end
+            PersonalResource:UpdateComboLayout(GetCfg("BARWIDTH", 200))
+            comboFrame:SetHeight(slotHeight)
+            comboFrame:Show()
+            PersonalResource:UpdateComboPoints()
+            if primaryKey == "COMBO" then overflowPower = bars.POWER end
+            bars.COMBO = comboFrame
+        elseif comboFrame then
+            comboFrame:Hide()
+        end
         UpdateDruidExtraBars(nativeFrame, primaryType, hasAlternate)
         for key, bar in pairs(druidBars) do
             if bar.frame:IsShown() then
@@ -432,17 +489,27 @@ local function UpdateNativeOrder()
     local hasBar = false
     for _, key in ipairs(PersonalResource:GetBarOrder()) do
         local bar = bars[key]
-        if bar and bar:IsShown() and (bar ~= classBar or not nativeFrame.HasClassInfo or nativeFrame:HasClassInfo()) then
+        local visible = bar and bar:IsShown() and (bar ~= classBar or not nativeFrame.HasClassInfo or nativeFrame:HasClassInfo())
+        if visible or (druid and ReserveDruidSlot(key)) then
             if hasBar then offset = offset + spacing end
-            if bar == classBar and not NativeHasComboPoints() then offset = offset - (bar.yOffset or 0) end
-            bar:ClearAllPoints()
-            bar:SetPoint("TOP", nativeFrame, "TOP", 0, -offset)
-            offset = offset + bar:GetHeight()
+            if visible then
+                if bar == classBar and not NativeHasComboPoints() then offset = offset - (bar.yOffset or 0) end
+                bar:ClearAllPoints()
+                bar:SetPoint("TOP", nativeFrame, "TOP", 0, -offset)
+            end
+            offset = offset + (druid and slotHeight or bar:GetHeight())
             hasBar = true
         end
     end
+    if overflowPower and overflowPower:IsShown() then
+        overflowPower:ClearAllPoints()
+        overflowPower:SetPoint("TOP", nativeFrame, "TOP", 0, -offset - spacing)
+        offset = offset + spacing + slotHeight
+    end
     local minimum = nativeFrame.GetMinimumFrameHeight and nativeFrame:GetMinimumFrameHeight() or 1
-    nativeFrame:SetHeight(math.max(offset, minimum))
+    local height = math.max(offset, minimum)
+    if druid then nativeDruidHeight = height end
+    nativeFrame:SetHeight(height)
 end
 
 local function ScheduleNativeOrder()
@@ -487,7 +554,7 @@ local function UpdateNativeComboLayout()
     local classFrame = nativeFrame.classFrame
     if not classFrame or not NativeHasComboPoints() then return end
     if nativeFrame.SetHideClassInfo then
-        local hide = not GetCfg("SHOWCOMBOPOINTS", true)
+        local hide = not GetCfg("SHOWCOMBOPOINTS", true) and not DruidComboAlwaysShown()
         if (not not nativeFrame.hideClassInfo) ~= hide then nativeFrame:SetHideClassInfo(hide) end
     end
 
@@ -605,22 +672,48 @@ function PersonalResource:UpdateFrames()
     local showMana = PersonalResource:HasSecondaryMana()
     local showCombo = PersonalResource:HasComboPoints()
     local templates = barTemplates
+    local order = PersonalResource:GetBarOrder()
     if PersonalResource:IsDruid() then
         local powerType = UnitPowerType("player")
         local primaryKey = GetDruidPowerKey(powerType) or "COMBO"
         templates = {HEALTH = hpTemplate, MANA = manaTemplate, COMBO = barTemplates.COMBO}
-        templates[primaryKey] = powerTemplate
+        if primaryKey == "COMBO" and showCombo then
+            templates.POWER = powerTemplate
+            table.insert(order, "POWER")
+        else
+            templates[primaryKey] = powerTemplate
+        end
         UpdateDruidExtraBars(frame, powerType, showMana)
         for key, bar in pairs(druidBars) do
             if bar.frame:IsShown() then templates[key] = bar end
         end
         if not showMana then manaTemplate.frame:Hide() end
         if not showCombo then comboFrame:Hide() end
+        local offset = 0
+        local gap = spacing + overTop + overBottom
+        for _, key in ipairs(order) do
+            local template = templates[key]
+            local visible = template and (template ~= manaTemplate or showMana) and (template.frame ~= comboFrame or showCombo)
+            if visible then
+                if template.frame == comboFrame then
+                    PersonalResource:UpdateComboLayout(width)
+                    comboFrame:SetHeight(height)
+                else
+                    PersonalResource:SetUnitFrameSize(template, width, height)
+                end
+                template.frame:ClearAllPoints()
+                template.frame:SetPoint("TOP", frame, "TOP", 0, -offset)
+                template.frame:Show()
+            end
+            if visible or ReserveDruidSlot(key) then offset = offset + height + gap end
+        end
+        frame:SetSize(width, math.max(offset - gap, 1))
+        return
     end
     local previous = nil
     local previousBottom = 0
     local total = 0
-    for _, key in ipairs(PersonalResource:GetBarOrder()) do
+    for _, key in ipairs(order) do
         local template = templates[key]
         local visible = template and (template ~= manaTemplate or showMana) and (template.frame ~= comboFrame or showCombo)
         if template and not visible then
@@ -995,8 +1088,13 @@ initFrame:SetScript("OnEvent", function(self, event)
         end)
         return
     end
-    if event == "UNIT_POWER_UPDATE" or event == "UNIT_MAXPOWER" then
+    if event == "PLAYER_TARGET_CHANGED" or event == "UNIT_COMBO_POINTS" then
+        PersonalResource:UpdateComboPoints()
+        return
+    end
+    if event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT" or event == "UNIT_MAXPOWER" then
         UpdateDruidBarValues()
+        if nativeFrame then PersonalResource:UpdateComboPoints() end
         return
     end
     if event == "UNIT_DISPLAYPOWER" then
@@ -1017,14 +1115,26 @@ initFrame:SetScript("OnEvent", function(self, event)
     if class == "DRUID" then
         PersonalResource:RegisterEvent(self, "UNIT_DISPLAYPOWER", "player")
         PersonalResource:RegisterEvent(self, "UNIT_POWER_UPDATE", "player")
+        PersonalResource:RegisterEvent(self, "UNIT_POWER_FREQUENT", "player")
         PersonalResource:RegisterEvent(self, "UNIT_MAXPOWER", "player")
+        if nativeFrame then
+            PersonalResource:RegisterEvent(self, "UNIT_COMBO_POINTS", "player")
+            self:RegisterEvent("PLAYER_TARGET_CHANGED")
+        end
     end
     if nativeFrame then
         if class == "DRUID" then
             hooksecurefunc(nativeFrame, "UpdateShownState", ShowNativeDruidDisplay)
             if nativeFrame.SetHidePower then hooksecurefunc(nativeFrame, "SetHidePower", SyncNativeDruidPowerBar) end
         end
-        if nativeFrame.UpdateFrameHeight then hooksecurefunc(nativeFrame, "UpdateFrameHeight", ScheduleNativeOrder) end
+        if nativeFrame.UpdateFrameHeight then
+            hooksecurefunc(nativeFrame, "UpdateFrameHeight", function()
+                if nativeDruidHeight and (not InCombatLockdown() or not nativeFrame:IsProtected()) then
+                    nativeFrame:SetHeight(nativeDruidHeight)
+                end
+                ScheduleNativeOrder()
+            end)
+        end
         if nativeFrame.UpdateHealth then
             hooksecurefunc(nativeFrame, "UpdateHealth", function()
                 UpdateNativeHealthColor()

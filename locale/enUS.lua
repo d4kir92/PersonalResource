@@ -1,6 +1,7 @@
 -- enUS English
 local _, PersonalResource = ...
 PersonalResource:AddTrans("enUS", "LID_ALTERNATEPOWER", "Alternate Power")
+PersonalResource:AddTrans("enUS", "LID_ALWAYSSHOWDRUIDCOMBO", "Always show Combo Points")
 PersonalResource:AddTrans("enUS", "LID_ALWAYSSHOWDRUIDENERGY", "Always show Energy")
 PersonalResource:AddTrans("enUS", "LID_ALWAYSSHOWDRUIDRAGE", "Always show Rage")
 PersonalResource:AddTrans("enUS", "LID_BARORDER", "Bar Order")

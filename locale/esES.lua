@@ -1,6 +1,7 @@
 -- esES Español Spanish
 local _, PersonalResource = ...
 PersonalResource:AddTrans("esES", "LID_ALTERNATEPOWER", "Poder alternativo")
+PersonalResource:AddTrans("esES", "LID_ALWAYSSHOWDRUIDCOMBO", "Mostrar siempre los puntos de combo")
 PersonalResource:AddTrans("esES", "LID_ALWAYSSHOWDRUIDENERGY", "Mostrar siempre la energía")
 PersonalResource:AddTrans("esES", "LID_ALWAYSSHOWDRUIDRAGE", "Mostrar siempre la ira")
 PersonalResource:AddTrans("esES", "LID_BARORDER", "Orden de las barras")

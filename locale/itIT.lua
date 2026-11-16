@@ -1,6 +1,7 @@
 -- itIT Italiano Italian
 local _, PersonalResource = ...
 PersonalResource:AddTrans("itIT", "LID_ALTERNATEPOWER", "Potere alternativo")
+PersonalResource:AddTrans("itIT", "LID_ALWAYSSHOWDRUIDCOMBO", "Mostra sempre i punti combo")
 PersonalResource:AddTrans("itIT", "LID_ALWAYSSHOWDRUIDENERGY", "Mostra sempre energia")
 PersonalResource:AddTrans("itIT", "LID_ALWAYSSHOWDRUIDRAGE", "Mostra sempre rabbia")
 PersonalResource:AddTrans("itIT", "LID_BARORDER", "Ordine delle barre")
