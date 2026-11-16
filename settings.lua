@@ -197,7 +197,9 @@ function PersonalResource:InitSettings()
         end
     end)
 
-    AddCheckbox("LOCKED", "LOCKED", false, function() PersonalResource:UpdateAll() end)
+    if not PersonalResource:UsesNativeDisplay() then
+        AddCheckbox("LOCKED", "LOCKED", false, function() PersonalResource:UpdateAll() end)
+    end
     AddCategory("BARS")
     AddSlider("WIDTH", "BARWIDTH", 200, 40, 400, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("HEIGHT", "BARHEIGHT", 19, 4, 64, 1, 0, function() PersonalResource:UpdateAll() end)
@@ -223,6 +225,9 @@ function PersonalResource:InitSettings()
     AddCheckbox("SHOWMAXPOWERVALUE", "SHOWMAXPOWERVALUE", false, function() PersonalResource:UpdateAll() end)
     AddCheckbox("SHOWPOWERPERCENTAGE", "SHOWPOWERPERCENTAGE", true, function() PersonalResource:UpdateAll() end)
     AddCategory("PET")
+    if PersonalResource:UsesNativeDisplay() then
+        AddCheckbox("LOCKED", "LOCKED", false, function() PersonalResource:UpdateAll() end)
+    end
     AddCheckbox("SHOWPETFRAME", "SHOWPETFRAME", true, function() PersonalResource:UpdateAll() end)
     AddSlider("PETWIDTH", "PETBARWIDTH", 150, 40, 400, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("PETHEIGHT", "PETBARHEIGHT", 14, 4, 64, 1, 0, function() PersonalResource:UpdateAll() end)

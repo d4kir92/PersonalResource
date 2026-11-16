@@ -74,16 +74,11 @@ local function ShowMoveHelpers(moveOverlay, show)
     end
 end
 
-local function CreateMovableFrame(name, dbKey, target)
-    local handle = CreateFrame("Frame", name, target or UIParent)
-    local movable = target or handle
-    if target then
-        handle:SetAllPoints(target)
-    else
-        movable:SetSize(200, 100)
-        movable:SetMovable(true)
-    end
-    handle:EnableMouse(true)
+local function CreateMovableFrame(name, dbKey)
+    local movable = CreateFrame("Frame", name, UIParent)
+    movable:SetSize(200, 100)
+    movable:SetMovable(true)
+    movable:EnableMouse(true)
     local moveOverlay = CreateFrame("Frame", name .. "MoveOverlay", movable)
     moveOverlay:SetAllPoints(movable)
     moveOverlay:SetFrameLevel(movable:GetFrameLevel() + 10)
@@ -116,19 +111,18 @@ local function CreateMovableFrame(name, dbKey, target)
             movable:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
         end
     end
-    handle:SetScript("OnMouseDown", function(_, button)
-        if button == "LeftButton" and (not target or not InCombatLockdown()) then
-            movable:SetMovable(true)
+    movable:SetScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" then
             movable:StartMoving()
             moving = true
             ShowMoveHelpers(moveOverlay, true)
         end
     end)
-    handle:SetScript("OnMouseUp", function(_, button)
+    movable:SetScript("OnMouseUp", function(_, button)
         if button == "LeftButton" then StopMoving() end
     end)
-    handle:SetScript("OnHide", StopMoving)
-    return handle
+    movable:SetScript("OnHide", StopMoving)
+    return movable
 end
 
 local function RestoreFramePosition(movable, dbKey)
@@ -144,9 +138,7 @@ end
 
 local nativeFrame
 local nativeLayoutPending = false
-local nativePositionPending = false
 local nativeOrderScheduled = false
-local nativeMoveHandle
 local nativeComboFrame
 local nativeTexts = {}
 local frame
@@ -471,10 +463,6 @@ function PersonalResource:UpdateFrames()
         end
 
         nativeLayoutPending = false
-        if nativePositionPending and not nativeFrame.isInEditMode then
-            nativePositionPending = false
-            RestoreFramePosition(nativeFrame, "mainFrame")
-        end
         local width = GetCfg("BARWIDTH", 200)
         local height = GetCfg("BARHEIGHT", 19)
         if nativeFrame.SetBarWidth and nativeFrame.defaultBarWidth and nativeFrame.defaultBarWidth > 0 then
@@ -778,7 +766,6 @@ function PersonalResource:UpdateVisibility()
         local alpha = GetVisibilityAlpha(playerDisplay, GetCfg("SHOWONHOVER", false), hideFull and not playerDisplay.isInEditMode)
         if playerDisplay:GetAlpha() ~= alpha then playerDisplay:SetAlpha(alpha) end
         if frame then frame:EnableMouse(not locked and alpha > 0) end
-        if nativeMoveHandle then nativeMoveHandle:SetShown(not locked and alpha > 0 and not nativeFrame.isInEditMode) end
     end
     local petHideFull = ShouldHideWhenFull("PETHIDEWHENFULLHP", "PETHIDEWHENFULLPOWER", IsFull(UnitHealth("pet"), UnitHealthMax("pet")), IsFull(UnitPower("pet"), UnitPowerMax("pet")))
     local petAlpha = GetVisibilityAlpha(petFrame, GetCfg("PETSHOWONHOVER", false), petHideFull)
@@ -884,7 +871,6 @@ local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_ENTERING_WORLD" then
         self:UnregisterEvent(event)
-        nativePositionPending = true
         C_Timer.After(0, function() PersonalResource:UpdateFrames() end)
         return
     end
@@ -899,7 +885,6 @@ initFrame:SetScript("OnEvent", function(self, event)
     PersonalResourceG = PersonalResourceG or {}
     nativeFrame = EnableNativeDisplay()
     if nativeFrame then
-        nativeMoveHandle = CreateMovableFrame("PersonalResourceNativeMoveHandle", "mainFrame", nativeFrame)
         if nativeFrame.UpdateFrameHeight then hooksecurefunc(nativeFrame, "UpdateFrameHeight", ScheduleNativeOrder) end
         if nativeFrame.UpdateHealth then
             hooksecurefunc(nativeFrame, "UpdateHealth", function()
@@ -925,7 +910,6 @@ initFrame:SetScript("OnEvent", function(self, event)
             hooksecurefunc(nativeFrame, "SetIsInEditMode", function(_, editing)
                 PersonalResource:UpdateVisibility()
                 if not editing then
-                    nativePositionPending = true
                     C_Timer.After(0, function() PersonalResource:UpdateFrames() end)
                 end
             end)
