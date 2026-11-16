@@ -1,11 +1,13 @@
 -- zhTW 繁體中文 Chinese (Traditional)
 local _, PersonalResource = ...
+PersonalResource:AddTrans("zhTW", "LID_ALTERNATEPOWER", "額外能量")
 PersonalResource:AddTrans("zhTW", "LID_BARORDER", "狀態條順序")
 PersonalResource:AddTrans("zhTW", "LID_BARS", "狀態條")
 PersonalResource:AddTrans("zhTW", "LID_BARSLOT1", "位置 1")
 PersonalResource:AddTrans("zhTW", "LID_BARSLOT2", "位置 2")
 PersonalResource:AddTrans("zhTW", "LID_BARSLOT3", "位置 3")
 PersonalResource:AddTrans("zhTW", "LID_BARSLOT4", "位置 4")
+PersonalResource:AddTrans("zhTW", "LID_CLASSRESOURCE", "職業資源")
 PersonalResource:AddTrans("zhTW", "LID_COLORS", "顏色")
 PersonalResource:AddTrans("zhTW", "LID_COMBOPOINTS", "連擊點數")
 PersonalResource:AddTrans("zhTW", "LID_COMBOSIZE", "連擊點數大小")

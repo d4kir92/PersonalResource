@@ -1,11 +1,13 @@
 -- esMX Español (México) Spanish (Mexico)
 local _, PersonalResource = ...
+PersonalResource:AddTrans("esMX", "LID_ALTERNATEPOWER", "Poder alternativo")
 PersonalResource:AddTrans("esMX", "LID_BARORDER", "Orden de las barras")
 PersonalResource:AddTrans("esMX", "LID_BARS", "Barras")
 PersonalResource:AddTrans("esMX", "LID_BARSLOT1", "Posición 1")
 PersonalResource:AddTrans("esMX", "LID_BARSLOT2", "Posición 2")
 PersonalResource:AddTrans("esMX", "LID_BARSLOT3", "Posición 3")
 PersonalResource:AddTrans("esMX", "LID_BARSLOT4", "Posición 4")
+PersonalResource:AddTrans("esMX", "LID_CLASSRESOURCE", "Recurso de clase")
 PersonalResource:AddTrans("esMX", "LID_COLORS", "Colores")
 PersonalResource:AddTrans("esMX", "LID_COMBOPOINTS", "Puntos de combo")
 PersonalResource:AddTrans("esMX", "LID_COMBOSIZE", "Tamaño de los puntos de combo")

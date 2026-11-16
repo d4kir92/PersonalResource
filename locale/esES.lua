@@ -1,11 +1,13 @@
 -- esES Español Spanish
 local _, PersonalResource = ...
+PersonalResource:AddTrans("esES", "LID_ALTERNATEPOWER", "Poder alternativo")
 PersonalResource:AddTrans("esES", "LID_BARORDER", "Orden de las barras")
 PersonalResource:AddTrans("esES", "LID_BARS", "Barras")
 PersonalResource:AddTrans("esES", "LID_BARSLOT1", "Posición 1")
 PersonalResource:AddTrans("esES", "LID_BARSLOT2", "Posición 2")
 PersonalResource:AddTrans("esES", "LID_BARSLOT3", "Posición 3")
 PersonalResource:AddTrans("esES", "LID_BARSLOT4", "Posición 4")
+PersonalResource:AddTrans("esES", "LID_CLASSRESOURCE", "Recurso de clase")
 PersonalResource:AddTrans("esES", "LID_COLORS", "Colores")
 PersonalResource:AddTrans("esES", "LID_COMBOPOINTS", "Puntos de combo")
 PersonalResource:AddTrans("esES", "LID_COMBOSIZE", "Tamaño de los puntos de combo")

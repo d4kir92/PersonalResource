@@ -1,11 +1,13 @@
 -- koKR 한국어 Korean
 local _, PersonalResource = ...
+PersonalResource:AddTrans("koKR", "LID_ALTERNATEPOWER", "보조 자원")
 PersonalResource:AddTrans("koKR", "LID_BARORDER", "바 순서")
 PersonalResource:AddTrans("koKR", "LID_BARS", "바")
 PersonalResource:AddTrans("koKR", "LID_BARSLOT1", "위치 1")
 PersonalResource:AddTrans("koKR", "LID_BARSLOT2", "위치 2")
 PersonalResource:AddTrans("koKR", "LID_BARSLOT3", "위치 3")
 PersonalResource:AddTrans("koKR", "LID_BARSLOT4", "위치 4")
+PersonalResource:AddTrans("koKR", "LID_CLASSRESOURCE", "직업 자원")
 PersonalResource:AddTrans("koKR", "LID_COLORS", "색상")
 PersonalResource:AddTrans("koKR", "LID_COMBOPOINTS", "연계 점수")
 PersonalResource:AddTrans("koKR", "LID_COMBOSIZE", "연계 점수 크기")

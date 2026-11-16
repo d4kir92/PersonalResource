@@ -1,11 +1,13 @@
 -- zhCN 简体中文 Chinese (Simplified)
 local _, PersonalResource = ...
+PersonalResource:AddTrans("zhCN", "LID_ALTERNATEPOWER", "额外能量")
 PersonalResource:AddTrans("zhCN", "LID_BARORDER", "状态条顺序")
 PersonalResource:AddTrans("zhCN", "LID_BARS", "状态条")
 PersonalResource:AddTrans("zhCN", "LID_BARSLOT1", "位置 1")
 PersonalResource:AddTrans("zhCN", "LID_BARSLOT2", "位置 2")
 PersonalResource:AddTrans("zhCN", "LID_BARSLOT3", "位置 3")
 PersonalResource:AddTrans("zhCN", "LID_BARSLOT4", "位置 4")
+PersonalResource:AddTrans("zhCN", "LID_CLASSRESOURCE", "职业资源")
 PersonalResource:AddTrans("zhCN", "LID_COLORS", "颜色")
 PersonalResource:AddTrans("zhCN", "LID_COMBOPOINTS", "连击点")
 PersonalResource:AddTrans("zhCN", "LID_COMBOSIZE", "连击点大小")

@@ -1,11 +1,13 @@
 -- ruRU Русский Russian
 local _, PersonalResource = ...
+PersonalResource:AddTrans("ruRU", "LID_ALTERNATEPOWER", "Дополнительный ресурс")
 PersonalResource:AddTrans("ruRU", "LID_BARORDER", "Порядок полос")
 PersonalResource:AddTrans("ruRU", "LID_BARS", "Полосы")
 PersonalResource:AddTrans("ruRU", "LID_BARSLOT1", "Позиция 1")
 PersonalResource:AddTrans("ruRU", "LID_BARSLOT2", "Позиция 2")
 PersonalResource:AddTrans("ruRU", "LID_BARSLOT3", "Позиция 3")
 PersonalResource:AddTrans("ruRU", "LID_BARSLOT4", "Позиция 4")
+PersonalResource:AddTrans("ruRU", "LID_CLASSRESOURCE", "Ресурс класса")
 PersonalResource:AddTrans("ruRU", "LID_COLORS", "Цвета")
 PersonalResource:AddTrans("ruRU", "LID_COMBOPOINTS", "Серия приемов")
 PersonalResource:AddTrans("ruRU", "LID_COMBOSIZE", "Размер очков серии приемов")

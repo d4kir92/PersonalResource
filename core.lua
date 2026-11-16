@@ -74,11 +74,16 @@ local function ShowMoveHelpers(moveOverlay, show)
     end
 end
 
-local function CreateMovableFrame(name, dbKey)
-    local movable = CreateFrame("Frame", name, UIParent)
-    movable:SetSize(200, 100)
-    movable:SetMovable(true)
-    movable:EnableMouse(true)
+local function CreateMovableFrame(name, dbKey, target)
+    local handle = CreateFrame("Frame", name, target or UIParent)
+    local movable = target or handle
+    if target then
+        handle:SetAllPoints(target)
+    else
+        movable:SetSize(200, 100)
+        movable:SetMovable(true)
+    end
+    handle:EnableMouse(true)
     local moveOverlay = CreateFrame("Frame", name .. "MoveOverlay", movable)
     moveOverlay:SetAllPoints(movable)
     moveOverlay:SetFrameLevel(movable:GetFrameLevel() + 10)
@@ -94,28 +99,36 @@ local function CreateMovableFrame(name, dbKey)
     crossVer:SetWidth(1)
     crossVer:SetPoint("TOP", moveOverlay, "TOP", 0, 0)
     crossVer:SetPoint("BOTTOM", moveOverlay, "BOTTOM", 0, 0)
-    movable:SetScript("OnMouseDown", function(self, button)
-        if button == "LeftButton" then
-            self:StartMoving()
-            ShowMoveHelpers(moveOverlay, true)
-        end
-    end)
-
-    movable:SetScript("OnMouseUp", function(self, button)
-        if button == "LeftButton" then
-            self:StopMovingOrSizing()
+    local moving = false
+    local function StopMoving()
+        if moving then
+            moving = false
+            movable:StopMovingOrSizing()
             ShowMoveHelpers(moveOverlay, false)
-            local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
+            local point, _, relativePoint, xOfs, yOfs = movable:GetPoint()
+            if not point then return end
             if xOfs < 15 and xOfs > -15 then xOfs = 0 end
             if yOfs < 15 and yOfs > -15 then yOfs = 0 end
             if not PersonalResourceG then PersonalResourceG = {} end
             if not PersonalResourceG[dbKey] then PersonalResourceG[dbKey] = {} end
             PersonalResourceG[dbKey]["position"] = {point, relativePoint, xOfs, yOfs}
-            self:ClearAllPoints()
-            self:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
+            movable:ClearAllPoints()
+            movable:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
+        end
+    end
+    handle:SetScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" and (not target or not InCombatLockdown()) then
+            movable:SetMovable(true)
+            movable:StartMoving()
+            moving = true
+            ShowMoveHelpers(moveOverlay, true)
         end
     end)
-    return movable
+    handle:SetScript("OnMouseUp", function(_, button)
+        if button == "LeftButton" then StopMoving() end
+    end)
+    handle:SetScript("OnHide", StopMoving)
+    return handle
 end
 
 local function RestoreFramePosition(movable, dbKey)
@@ -129,45 +142,84 @@ local function RestoreFramePosition(movable, dbKey)
     movable:SetPoint(point, UIParent, relativePoint, xOfs, yOfs)
 end
 
-local frame = CreateMovableFrame("PersonalResourceFrame", "mainFrame")
-frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
+local nativeFrame
+local nativeLayoutPending = false
+local nativePositionPending = false
+local nativeOrderScheduled = false
+local nativeMoveHandle
+local nativeComboFrame
+local nativeTexts = {}
+local frame
+local hpTemplate, hpBar
+local powerTemplate, powerBar
+local manaTemplate, manaBar
+local comboFrame
+local comboPoints = {}
+local barTemplates = {}
+
+function PersonalResource:UsesNativeDisplay()
+    return nativeFrame ~= nil
+end
+
+local function EnableNativeDisplay()
+    if not PersonalResourceDisplayFrame and C_AddOns and C_AddOns.LoadAddOn then
+        C_AddOns.LoadAddOn("Blizzard_PersonalResourceDisplay")
+    end
+
+    local display = PersonalResourceDisplayFrame
+    if not display or not display.UpdateShownState then return end
+    local getCVar = C_CVar and C_CVar.GetCVar or GetCVar
+    local setCVar = C_CVar and C_CVar.SetCVar or SetCVar
+    if getCVar and setCVar and getCVar("nameplateShowSelf") == "0" then
+        setCVar("nameplateShowSelf", "1")
+    end
+    if C_GameRules and C_GameRules.IsPersonalResourceDisplayEnabled and not C_GameRules.IsPersonalResourceDisplayEnabled() then return end
+    local visibility = Enum and Enum.PersonalResourceDisplayVisibleSetting
+    if visibility and visibility.Never and display.GetVisibleSetting and display.SetVisibleSetting and display:GetVisibleSetting() == visibility.Never then
+        display:SetVisibleSetting(visibility.Always)
+    else
+        display:UpdateShownState()
+    end
+    return display
+end
+
+local function CreatePlayerFrame()
+    frame = CreateMovableFrame("PersonalResourceFrame", "mainFrame")
+    frame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 200)
+    hpTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
+    hpTemplate.frame:SetPoint("TOP", frame, "TOP", 0, 0)
+    hpBar = hpTemplate.statusBar
+    local hpLeftText = hpTemplate.leftText
+    local hpRightText = hpTemplate.rightText
+    hpLeftText:SetTextColor(1, 1, 1, 1)
+    hpRightText:SetTextColor(1, 1, 1, 1)
+    powerTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
+    powerTemplate.frame:SetPoint("TOP", hpTemplate.frame, "BOTTOM", 0, -5)
+    powerBar = powerTemplate.statusBar
+    local powerLeftText = powerTemplate.leftText
+    local powerRightText = powerTemplate.rightText
+    powerLeftText:SetTextColor(1, 1, 1, 1)
+    powerRightText:SetTextColor(1, 1, 1, 1)
+    manaTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
+    manaTemplate.frame:SetPoint("TOP", powerTemplate.frame, "BOTTOM", 0, -5)
+    manaTemplate.frame:Hide()
+    manaBar = manaTemplate.statusBar
+    manaTemplate.leftText:SetTextColor(1, 1, 1, 1)
+    manaTemplate.rightText:SetTextColor(1, 1, 1, 1)
+    comboFrame = CreateFrame("Frame", nil, frame)
+    comboFrame:SetSize(200, 20)
+    comboFrame:SetPoint("TOP", manaTemplate.frame, "BOTTOM", 0, -5)
+    comboFrame:Hide()
+    barTemplates.HEALTH = hpTemplate
+    barTemplates.POWER = powerTemplate
+    barTemplates.MANA = manaTemplate
+    barTemplates.COMBO = {frame = comboFrame}
+    RestoreFramePosition(frame, "mainFrame")
+end
+
 local petFrame = CreateMovableFrame("PersonalResourcePetFrame", "petFrame")
 petFrame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 300)
 petFrame:Hide()
-local hpTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
-hpTemplate.frame:SetPoint("TOP", frame, "TOP", 0, 0)
-local hpBar = hpTemplate.statusBar
-local hpLeftText = hpTemplate.leftText
-local hpRightText = hpTemplate.rightText
-hpLeftText:SetTextColor(1, 1, 1, 1)
-hpRightText:SetTextColor(1, 1, 1, 1)
-local powerTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
-powerTemplate.frame:SetPoint("TOP", hpTemplate.frame, "BOTTOM", 0, -5)
-local powerBar = powerTemplate.statusBar
-local powerLeftText = powerTemplate.leftText
-local powerRightText = powerTemplate.rightText
-powerLeftText:SetTextColor(1, 1, 1, 1)
-powerRightText:SetTextColor(1, 1, 1, 1)
-local manaTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(frame, 200, 19)
-manaTemplate.frame:SetPoint("TOP", powerTemplate.frame, "BOTTOM", 0, -5)
-manaTemplate.frame:Hide()
-local manaBar = manaTemplate.statusBar
-manaTemplate.leftText:SetTextColor(1, 1, 1, 1)
-manaTemplate.rightText:SetTextColor(1, 1, 1, 1)
-local comboFrame = CreateFrame("Frame", nil, frame)
-comboFrame:SetSize(200, 20)
-comboFrame:SetPoint("TOP", manaTemplate.frame, "BOTTOM", 0, -5)
-comboFrame:Hide()
-local comboPoints = {}
-local barTemplates = {
-    ["HEALTH"] = hpTemplate,
-    ["POWER"] = powerTemplate,
-    ["MANA"] = manaTemplate,
-    ["COMBO"] = {
-        frame = comboFrame
-    }
-}
-
 local petHPTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(petFrame, 150, 14)
 petHPTemplate.frame:SetPoint("TOP", petFrame, "TOP", 0, 0)
 local petHPBar = petHPTemplate.statusBar
@@ -240,6 +292,14 @@ local function BuildBarOrder(prefix, keys, templates)
 end
 
 function PersonalResource:GetBarOrder()
+    if nativeFrame then
+        return BuildBarOrder("BARSLOT", BARKEYS, {
+            HEALTH = nativeFrame.HealthBarsContainer,
+            POWER = nativeFrame.PowerBar,
+            MANA = nativeFrame.AlternatePowerBar,
+            COMBO = nativeFrame.ClassFrameContainer
+        })
+    end
     return BuildBarOrder("BARSLOT", BARKEYS, barTemplates)
 end
 
@@ -278,7 +338,167 @@ function PersonalResource:UpdateComboPoints()
     end
 end
 
+local function UpdateNativeOrder()
+    if InCombatLockdown() then
+        nativeLayoutPending = true
+        return
+    end
+
+    local bars = {
+        HEALTH = nativeFrame.HealthBarsContainer,
+        POWER = nativeFrame.PowerBar,
+        MANA = nativeFrame.AlternatePowerBar,
+        COMBO = nativeFrame.ClassFrameContainer
+    }
+    local offset = 0
+    local spacing = GetCfg("BARSPACING", 0)
+    local hasBar = false
+    for _, key in ipairs(PersonalResource:GetBarOrder()) do
+        local bar = bars[key]
+        if bar and bar:IsShown() and (key ~= "COMBO" or not nativeFrame.HasClassInfo or nativeFrame:HasClassInfo()) then
+            if hasBar then offset = offset + spacing end
+            if key == "COMBO" then offset = offset - (bar.yOffset or 0) end
+            bar:ClearAllPoints()
+            bar:SetPoint("TOP", nativeFrame, "TOP", 0, -offset)
+            offset = offset + bar:GetHeight()
+            hasBar = true
+        end
+    end
+    local minimum = nativeFrame.GetMinimumFrameHeight and nativeFrame:GetMinimumFrameHeight() or 1
+    nativeFrame:SetHeight(math.max(offset, minimum))
+end
+
+local function ScheduleNativeOrder()
+    if nativeOrderScheduled then return end
+    nativeOrderScheduled = true
+    C_Timer.After(0, function()
+        nativeOrderScheduled = false
+        UpdateNativeOrder()
+    end)
+end
+
+local function NativeHasComboPoints()
+    local _, class = UnitClass("player")
+    return class == "ROGUE" or class == "DRUID"
+end
+
+local function UpdateNativeComboLayout()
+    local classFrame = nativeFrame.classFrame
+    if not classFrame or not NativeHasComboPoints() then return end
+    if nativeFrame.SetHideClassInfo then
+        local hide = not GetCfg("SHOWCOMBOPOINTS", true)
+        if (not not nativeFrame.hideClassInfo) ~= hide then nativeFrame:SetHideClassInfo(hide) end
+    end
+
+    if nativeComboFrame ~= classFrame then
+        nativeComboFrame = classFrame
+        classFrame:HookScript("OnShow", ScheduleNativeOrder)
+        classFrame:HookScript("OnHide", ScheduleNativeOrder)
+        if classFrame.UpdateMaxPower then
+            hooksecurefunc(classFrame, "UpdateMaxPower", function()
+                C_Timer.After(0, function()
+                    if InCombatLockdown() then
+                        nativeLayoutPending = true
+                    else
+                        UpdateNativeComboLayout()
+                        UpdateNativeOrder()
+                    end
+                end)
+            end)
+        end
+    end
+
+    local points = classFrame.classResourceButtonTable
+    if not points or #points == 0 then return end
+    local size = GetCfg("COMBOPOINTSIZE", 20)
+    local spacing = GetCfg("COMBOPOINTSPACING", 4)
+    local step = size + spacing
+    nativeFrame.ClassFrameContainer:SetHeight(size)
+    for index, point in ipairs(points) do
+        local width = point:GetWidth() * point:GetScale()
+        if width > 0 then point:SetScale(point:GetScale() * size / width) end
+        point:ClearAllPoints()
+        point:SetPoint("CENTER", nativeFrame.ClassFrameContainer, "CENTER", (index - (#points + 1) / 2) * step / point:GetScale(), 0)
+    end
+end
+
+local function UpdateNativeHealthColor()
+    local bar = nativeFrame.healthbar
+    if not bar or not nativeFrame.GetDesiredHealthColor then return end
+    local fraction = GetResourceFraction(UnitHealth("player"), UnitHealthMax("player"))
+    if GetCfg("SMARTWARNINGCOLORS", false) and fraction and fraction < LOWHEALTHPCT then
+        bar:SetStatusBarColor(1, 0.1, 0.1, 1)
+    else
+        local color = nativeFrame:GetDesiredHealthColor()
+        if color then bar:SetStatusBarColor(color:GetRGB()) end
+    end
+end
+
+local function UpdateNativeText(bar, kind)
+    if not bar then return end
+    if not nativeTexts[bar] then
+        local left = bar:CreateFontString(nil, "OVERLAY", "TextStatusBarText", 7)
+        local right = bar:CreateFontString(nil, "OVERLAY", "TextStatusBarText", 7)
+        left:SetPoint("LEFT", bar, "LEFT", 4, 0)
+        right:SetPoint("RIGHT", bar, "RIGHT", -4, 0)
+        nativeTexts[bar] = {leftText = left, rightText = right}
+        if bar.TextString then bar.TextString:SetAlpha(0) end
+        if bar.LeftText then bar.LeftText:SetAlpha(0) end
+        if bar.RightText then bar.RightText:SetAlpha(0) end
+    end
+
+    local _, maximum = bar:GetMinMaxValues()
+    local value = bar:GetValue()
+    local fraction = GetResourceFraction(value, maximum)
+    local resource = kind == "HEALTH" and "HEALTH" or "POWER"
+    local percentEnabled = GetCfg("SHOW" .. resource .. "PERCENTAGE", true)
+    local showPercent, percent
+    if kind == "HEALTH" then
+        showPercent, percent = GetHealthTextPercent("player", percentEnabled, fraction)
+    elseif kind == "POWER" then
+        showPercent, percent = GetPowerTextPercent("player", percentEnabled, fraction, UnitPowerType("player"))
+    else
+        showPercent, percent = percentEnabled and fraction ~= nil, (fraction or 0) * 100
+    end
+    SetBarTexts(nativeTexts[bar], showPercent, percent, GetCfg("SHOW" .. resource .. "VALUE", true), GetCfg("SHOWMAX" .. resource .. "VALUE", false), value, maximum)
+end
+
 function PersonalResource:UpdateFrames()
+    if nativeFrame then
+        if InCombatLockdown() then
+            nativeLayoutPending = true
+            return
+        end
+
+        nativeLayoutPending = false
+        if nativePositionPending and not nativeFrame.isInEditMode then
+            nativePositionPending = false
+            RestoreFramePosition(nativeFrame, "mainFrame")
+        end
+        local width = GetCfg("BARWIDTH", 200)
+        local height = GetCfg("BARHEIGHT", 19)
+        if nativeFrame.SetBarWidth and nativeFrame.defaultBarWidth and nativeFrame.defaultBarWidth > 0 then
+            nativeFrame:SetBarWidth(width * 100 / nativeFrame.defaultBarWidth)
+        end
+        if nativeFrame.SetHealthBarHeight then nativeFrame:SetHealthBarHeight(height) end
+        if nativeFrame.SetPowerBarHeight then nativeFrame:SetPowerBarHeight(height) end
+        if nativeFrame.SetBarPadding then
+            local minimumPadding = nativeFrame.GetMinimumBarPadding and nativeFrame:GetMinimumBarPadding() or 0
+            nativeFrame:SetBarPadding(GetCfg("BARSPACING", 0) - minimumPadding)
+        end
+        if nativeFrame.SetShowClassColor and nativeFrame.healthbar then
+            nativeFrame:SetShowClassColor(GetCfg("USECLASSCOLOR", true))
+        end
+        UpdateNativeHealthColor()
+        UpdateNativeComboLayout()
+        UpdateNativeOrder()
+        local health = nativeFrame.HealthBarsContainer
+        UpdateNativeText(health and health.healthBar, "HEALTH")
+        UpdateNativeText(nativeFrame.PowerBar, "POWER")
+        UpdateNativeText(nativeFrame.AlternatePowerBar, "MANA")
+        return
+    end
+    if not frame then return end
     local width = GetCfg("BARWIDTH", 200)
     local height = GetCfg("BARHEIGHT", 19)
     local spacing = GetCfg("BARSPACING", 0)
@@ -520,6 +740,10 @@ end
 
 local function IsPlayerPowerFull()
     if not IsFull(UnitPower("player"), UnitPowerMax("player")) then return false end
+    if nativeFrame then
+        local alternate = nativeFrame.AlternatePowerBar
+        return not alternate or not alternate:IsShown() or IsFull(alternate:GetValue(), select(2, alternate:GetMinMaxValues()))
+    end
     if PersonalResource:HasSecondaryMana() then return IsFull(UnitPower("player", MANAPOWERTYPE), UnitPowerMax("player", MANAPOWERTYPE)) end
     return true
 end
@@ -548,10 +772,14 @@ end
 
 function PersonalResource:UpdateVisibility()
     local locked = GetCfg("LOCKED", false)
-    local hideFull = ShouldHideWhenFull("HIDEWHENFULLHP", "HIDEWHENFULLPOWER", IsPlayerHealthFull(), IsPlayerPowerFull())
-    local alpha = GetVisibilityAlpha(frame, GetCfg("SHOWONHOVER", false), hideFull)
-    frame:SetAlpha(alpha)
-    frame:EnableMouse(not locked and alpha > 0)
+    local playerDisplay = nativeFrame or frame
+    if playerDisplay then
+        local hideFull = ShouldHideWhenFull("HIDEWHENFULLHP", "HIDEWHENFULLPOWER", IsPlayerHealthFull(), IsPlayerPowerFull())
+        local alpha = GetVisibilityAlpha(playerDisplay, GetCfg("SHOWONHOVER", false), hideFull and not playerDisplay.isInEditMode)
+        if playerDisplay:GetAlpha() ~= alpha then playerDisplay:SetAlpha(alpha) end
+        if frame then frame:EnableMouse(not locked and alpha > 0) end
+        if nativeMoveHandle then nativeMoveHandle:SetShown(not locked and alpha > 0 and not nativeFrame.isInEditMode) end
+    end
     local petHideFull = ShouldHideWhenFull("PETHIDEWHENFULLHP", "PETHIDEWHENFULLPOWER", IsFull(UnitHealth("pet"), UnitHealthMax("pet")), IsFull(UnitPower("pet"), UnitPowerMax("pet")))
     local petAlpha = GetVisibilityAlpha(petFrame, GetCfg("PETSHOWONHOVER", false), petHideFull)
     petFrame:SetAlpha(petAlpha)
@@ -572,55 +800,59 @@ end)
 
 function PersonalResource:UpdateAll()
     PersonalResource:UpdateFrames()
-    PersonalResource:UpdateHealth()
-    PersonalResource:UpdatePower()
-    PersonalResource:UpdateMana()
-    PersonalResource:UpdatePowerType()
-    PersonalResource:UpdateComboPoints()
+    if frame then
+        PersonalResource:UpdateHealth()
+        PersonalResource:UpdatePower()
+        PersonalResource:UpdateMana()
+        PersonalResource:UpdatePowerType()
+        PersonalResource:UpdateComboPoints()
+    end
     PersonalResource:UpdatePet()
-    PersonalResource:UpdateVisibility()
 end
 
-local healthFrame = CreateFrame("Frame")
-healthFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateHealth() end)
-PersonalResource:RegisterEvent(healthFrame, "UNIT_HEALTH", "player")
-PersonalResource:RegisterEvent(healthFrame, "UNIT_MAXHEALTH", "player")
-local powerFrame = CreateFrame("Frame")
-powerFrame:SetScript("OnEvent", function(self, event, ...)
-    PersonalResource:UpdatePower()
-    PersonalResource:UpdateMana()
-    if event == "UNIT_MAXPOWER" then PersonalResource:UpdateFrames() end
-end)
+local function RegisterPlayerEvents()
+    local healthFrame = CreateFrame("Frame")
+    healthFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateHealth() end)
+    PersonalResource:RegisterEvent(healthFrame, "UNIT_HEALTH", "player")
+    PersonalResource:RegisterEvent(healthFrame, "UNIT_MAXHEALTH", "player")
+    local powerFrame = CreateFrame("Frame")
+    powerFrame:SetScript("OnEvent", function(self, event, ...)
+        PersonalResource:UpdatePower()
+        PersonalResource:UpdateMana()
+        if event == "UNIT_MAXPOWER" then PersonalResource:UpdateFrames() end
+    end)
 
-PersonalResource:RegisterEvent(powerFrame, "UNIT_POWER_UPDATE", "player")
-PersonalResource:RegisterEvent(powerFrame, "UNIT_MAXPOWER", "player")
-local displayPowerFrame = CreateFrame("Frame")
-displayPowerFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateAll() end)
-PersonalResource:RegisterEvent(displayPowerFrame, "UNIT_DISPLAYPOWER", "player")
-local powerTypFrame = CreateFrame("Frame")
-powerTypFrame:SetScript("OnEvent", function(self, event, a1, a2)
-    if PersonalResource:CanAccessValue(a2) and a2 ~= oldPowerType then
-        oldPowerType = a2
-        PersonalResource:UpdatePowerType()
-    end
-end)
+    PersonalResource:RegisterEvent(powerFrame, "UNIT_POWER_UPDATE", "player")
+    PersonalResource:RegisterEvent(powerFrame, "UNIT_MAXPOWER", "player")
+    local displayPowerFrame = CreateFrame("Frame")
+    displayPowerFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateAll() end)
+    PersonalResource:RegisterEvent(displayPowerFrame, "UNIT_DISPLAYPOWER", "player")
+    local powerTypFrame = CreateFrame("Frame")
+    powerTypFrame:SetScript("OnEvent", function(self, event, a1, a2)
+        if PersonalResource:CanAccessValue(a2) and a2 ~= oldPowerType then
+            oldPowerType = a2
+            PersonalResource:UpdatePowerType()
+        end
+    end)
 
-PersonalResource:RegisterEvent(powerTypFrame, "UNIT_POWER_UPDATE", "player")
-local shapeshiftFrame = CreateFrame("Frame")
-shapeshiftFrame:SetScript("OnEvent", function(self, event, ...)
-    local form = GetShapeshiftForm()
-    if oldShapeshift ~= form then
-        oldShapeshift = form
-        C_Timer.After(0.2, function() PersonalResource:UpdateAll() end)
-    end
-end)
+    PersonalResource:RegisterEvent(powerTypFrame, "UNIT_POWER_UPDATE", "player")
+    local shapeshiftFrame = CreateFrame("Frame")
+    shapeshiftFrame:SetScript("OnEvent", function(self, event, ...)
+        local form = GetShapeshiftForm()
+        if oldShapeshift ~= form then
+            oldShapeshift = form
+            C_Timer.After(0.2, function() PersonalResource:UpdateAll() end)
+        end
+    end)
 
-PersonalResource:RegisterEvent(shapeshiftFrame, "UPDATE_SHAPESHIFT_FORM")
-local comboEventFrame = CreateFrame("Frame")
-comboEventFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateComboPoints() end)
-PersonalResource:RegisterEvent(comboEventFrame, "UNIT_COMBO_POINTS", "player")
-PersonalResource:RegisterEvent(comboEventFrame, "UNIT_POWER_UPDATE", "player")
-PersonalResource:RegisterEvent(comboEventFrame, "PLAYER_TARGET_CHANGED")
+    PersonalResource:RegisterEvent(shapeshiftFrame, "UPDATE_SHAPESHIFT_FORM")
+    local comboEventFrame = CreateFrame("Frame")
+    comboEventFrame:SetScript("OnEvent", function(self, event, ...) PersonalResource:UpdateComboPoints() end)
+    PersonalResource:RegisterEvent(comboEventFrame, "UNIT_COMBO_POINTS", "player")
+    PersonalResource:RegisterEvent(comboEventFrame, "UNIT_POWER_UPDATE", "player")
+    PersonalResource:RegisterEvent(comboEventFrame, "PLAYER_TARGET_CHANGED")
+end
+
 local petHealthFrame = CreateFrame("Frame")
 petHealthFrame:SetScript("OnEvent", function(self, event, ...)
     if PersonalResource:HasPet() ~= oldPetState then
@@ -649,13 +881,61 @@ petStateFrame:SetScript("OnEvent", function(self, event, ...) C_Timer.After(0.1,
 PersonalResource:RegisterEvent(petStateFrame, "UNIT_PET", "player")
 PersonalResource:RegisterEvent(petStateFrame, "PLAYER_ENTERING_WORLD")
 local initFrame = CreateFrame("Frame")
-initFrame:SetScript("OnEvent", function(self, event, ...)
+initFrame:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_ENTERING_WORLD" then
+        self:UnregisterEvent(event)
+        nativePositionPending = true
+        C_Timer.After(0, function() PersonalResource:UpdateFrames() end)
+        return
+    end
+    if event == "PLAYER_REGEN_ENABLED" then
+        PersonalResource:UpdateVisibility()
+        if nativeLayoutPending then PersonalResource:UpdateFrames() end
+        return
+    end
+
     PersonalResource:SetAddonOutput()
     PersonalResource:SetVersion()
     PersonalResourceG = PersonalResourceG or {}
+    nativeFrame = EnableNativeDisplay()
+    if nativeFrame then
+        nativeMoveHandle = CreateMovableFrame("PersonalResourceNativeMoveHandle", "mainFrame", nativeFrame)
+        if nativeFrame.UpdateFrameHeight then hooksecurefunc(nativeFrame, "UpdateFrameHeight", ScheduleNativeOrder) end
+        if nativeFrame.UpdateHealth then
+            hooksecurefunc(nativeFrame, "UpdateHealth", function()
+                UpdateNativeHealthColor()
+                UpdateNativeText(nativeFrame.healthbar, "HEALTH")
+            end)
+        end
+        if nativeFrame.UpdatePower then
+            hooksecurefunc(nativeFrame, "UpdatePower", function() UpdateNativeText(nativeFrame.PowerBar, "POWER") end)
+        end
+        if nativeFrame.AlternatePowerBar then
+            nativeFrame.AlternatePowerBar:HookScript("OnValueChanged", function(bar) UpdateNativeText(bar, "MANA") end)
+        end
+        self:RegisterEvent("PLAYER_REGEN_ENABLED")
+        self:RegisterEvent("PLAYER_ENTERING_WORLD")
+        nativeFrame:HookScript("OnShow", function()
+            C_Timer.After(0, function()
+                PersonalResource:UpdateFrames()
+                PersonalResource:UpdateVisibility()
+            end)
+        end)
+        if nativeFrame.SetIsInEditMode then
+            hooksecurefunc(nativeFrame, "SetIsInEditMode", function(_, editing)
+                PersonalResource:UpdateVisibility()
+                if not editing then
+                    nativePositionPending = true
+                    C_Timer.After(0, function() PersonalResource:UpdateFrames() end)
+                end
+            end)
+        end
+    else
+        CreatePlayerFrame()
+        RegisterPlayerEvents()
+    end
     PersonalResource:InitSettings()
     PersonalResource:UpdateAll()
-    RestoreFramePosition(frame, "mainFrame")
     RestoreFramePosition(petFrame, "petFrame")
 end)
 

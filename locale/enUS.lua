@@ -1,11 +1,13 @@
 -- enUS English
 local _, PersonalResource = ...
+PersonalResource:AddTrans("enUS", "LID_ALTERNATEPOWER", "Alternate Power")
 PersonalResource:AddTrans("enUS", "LID_BARORDER", "Bar Order")
 PersonalResource:AddTrans("enUS", "LID_BARS", "Bars")
 PersonalResource:AddTrans("enUS", "LID_BARSLOT1", "Position 1")
 PersonalResource:AddTrans("enUS", "LID_BARSLOT2", "Position 2")
 PersonalResource:AddTrans("enUS", "LID_BARSLOT3", "Position 3")
 PersonalResource:AddTrans("enUS", "LID_BARSLOT4", "Position 4")
+PersonalResource:AddTrans("enUS", "LID_CLASSRESOURCE", "Class Resource")
 PersonalResource:AddTrans("enUS", "LID_COLORS", "Colors")
 PersonalResource:AddTrans("enUS", "LID_COMBOPOINTS", "Combo Points")
 PersonalResource:AddTrans("enUS", "LID_COMBOSIZE", "Combo Point Size")

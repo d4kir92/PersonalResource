@@ -159,7 +159,11 @@ local function AddBarSlot(prefix, index)
         ["label"] = "LID_" .. prefix .. index,
         ["search"] = prefix .. index,
         ["value"] = GetBarSlot(prefix, index),
-        ["choices"] = SLOTCHOICES[prefix],
+        ["choices"] = prefix == "BARSLOT" and PersonalResource:UsesNativeDisplay() and {
+            BARCHOICES[1], BARCHOICES[2],
+            {value = "MANA", label = "LID_ALTERNATEPOWER"},
+            {value = "COMBO", label = "LID_CLASSRESOURCE"}
+        } or SLOTCHOICES[prefix],
         ["func"] = function(value) SetBarSlot(prefix, index, value) end
     })
 end

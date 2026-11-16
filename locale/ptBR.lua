@@ -1,11 +1,13 @@
 -- ptBR Português (Brasil) Portuguese (Brazil)
 local _, PersonalResource = ...
+PersonalResource:AddTrans("ptBR", "LID_ALTERNATEPOWER", "Poder alternativo")
 PersonalResource:AddTrans("ptBR", "LID_BARORDER", "Ordem das barras")
 PersonalResource:AddTrans("ptBR", "LID_BARS", "Barras")
 PersonalResource:AddTrans("ptBR", "LID_BARSLOT1", "Posição 1")
 PersonalResource:AddTrans("ptBR", "LID_BARSLOT2", "Posição 2")
 PersonalResource:AddTrans("ptBR", "LID_BARSLOT3", "Posição 3")
 PersonalResource:AddTrans("ptBR", "LID_BARSLOT4", "Posição 4")
+PersonalResource:AddTrans("ptBR", "LID_CLASSRESOURCE", "Recurso de classe")
 PersonalResource:AddTrans("ptBR", "LID_COLORS", "Cores")
 PersonalResource:AddTrans("ptBR", "LID_COMBOPOINTS", "Pontos de combo")
 PersonalResource:AddTrans("ptBR", "LID_COMBOSIZE", "Tamanho dos pontos de combo")

@@ -1,11 +1,13 @@
 -- itIT Italiano Italian
 local _, PersonalResource = ...
+PersonalResource:AddTrans("itIT", "LID_ALTERNATEPOWER", "Potere alternativo")
 PersonalResource:AddTrans("itIT", "LID_BARORDER", "Ordine delle barre")
 PersonalResource:AddTrans("itIT", "LID_BARS", "Barre")
 PersonalResource:AddTrans("itIT", "LID_BARSLOT1", "Posizione 1")
 PersonalResource:AddTrans("itIT", "LID_BARSLOT2", "Posizione 2")
 PersonalResource:AddTrans("itIT", "LID_BARSLOT3", "Posizione 3")
 PersonalResource:AddTrans("itIT", "LID_BARSLOT4", "Posizione 4")
+PersonalResource:AddTrans("itIT", "LID_CLASSRESOURCE", "Risorsa di classe")
 PersonalResource:AddTrans("itIT", "LID_COLORS", "Colori")
 PersonalResource:AddTrans("itIT", "LID_COMBOPOINTS", "Punti combo")
 PersonalResource:AddTrans("itIT", "LID_COMBOSIZE", "Dimensione dei punti combo")

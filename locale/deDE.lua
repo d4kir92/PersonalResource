@@ -1,11 +1,13 @@
 -- deDE Deutsch German
 local _, PersonalResource = ...
+PersonalResource:AddTrans("deDE", "LID_ALTERNATEPOWER", "Sekundärressource")
 PersonalResource:AddTrans("deDE", "LID_BARORDER", "Reihenfolge der Leisten")
 PersonalResource:AddTrans("deDE", "LID_BARS", "Leisten")
 PersonalResource:AddTrans("deDE", "LID_BARSLOT1", "Position 1")
 PersonalResource:AddTrans("deDE", "LID_BARSLOT2", "Position 2")
 PersonalResource:AddTrans("deDE", "LID_BARSLOT3", "Position 3")
 PersonalResource:AddTrans("deDE", "LID_BARSLOT4", "Position 4")
+PersonalResource:AddTrans("deDE", "LID_CLASSRESOURCE", "Klassenressource")
 PersonalResource:AddTrans("deDE", "LID_COLORS", "Farben")
 PersonalResource:AddTrans("deDE", "LID_COMBOPOINTS", "Kombopunkte")
 PersonalResource:AddTrans("deDE", "LID_COMBOSIZE", "Größe der Kombopunkte")
