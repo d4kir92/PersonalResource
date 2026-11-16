@@ -6,14 +6,37 @@ local LOWHEALTHPCT = 0.35
 local GRIDSIZE = 5
 local VISIBILITYINTERVAL = 0.1
 local MANAPOWERTYPE = 0
+local RAGEPOWERTYPE = 1
 local ENERGYPOWERTYPE = 3
 local COMBOPOWERTYPE = 4
 local BARKEYS = {"HEALTH", "POWER", "MANA", "COMBO"}
+local DRUIDBARKEYS = {"HEALTH", "ENERGY", "MANA", "COMBO", "RAGE"}
+local DRUIDPOWERTYPES = {MANA = MANAPOWERTYPE, ENERGY = ENERGYPOWERTYPE, RAGE = RAGEPOWERTYPE}
+local druidBars = {}
 local PETBARKEYS = {"HEALTH", "POWER"}
 local HIDEWHENFULLKEYS = {"HIDEWHENFULLHP", "HIDEWHENFULLPOWER", "PETHIDEWHENFULLHP", "PETHIDEWHENFULLPOWER"}
 local function GetCfg(key, default)
     PersonalResourceG = PersonalResourceG or {}
     return PersonalResource:GV(PersonalResourceG, key, default)
+end
+
+function PersonalResource:IsDruid()
+    local _, class = UnitClass("player")
+    return class == "DRUID"
+end
+
+function PersonalResource:AlwaysShowDruidResource(key)
+    return GetCfg("ALWAYSSHOWDRUID" .. key, GetCfg("ALWAYSSHOWDRUIDPOWER", false))
+end
+
+local function AlwaysShowDruidPower()
+    return PersonalResource:IsDruid() and (PersonalResource:AlwaysShowDruidResource("ENERGY") or PersonalResource:AlwaysShowDruidResource("RAGE"))
+end
+
+local function GetDruidPowerKey(powerType)
+    for key, value in pairs(DRUIDPOWERTYPES) do
+        if value == powerType then return key end
+    end
 end
 
 local function GetResourceFraction(cur, max)
@@ -138,6 +161,7 @@ end
 
 local nativeFrame
 local nativeLayoutPending = false
+local nativeDruidPowerActive = false
 local nativeOrderScheduled = false
 local nativeComboFrame
 local nativeTexts = {}
@@ -262,41 +286,39 @@ function PersonalResource:HasComboPoints()
     return false
 end
 
-local function BuildBarOrder(prefix, keys, templates)
+local function BuildBarOrder(prefix, keys)
     local order = {}
     local used = {}
-    for i = 1, #keys do
-        local key = GetCfg(prefix .. i, keys[i])
-        if templates[key] and not used[key] then
+    for index, default in ipairs(keys) do
+        local key = GetCfg(prefix .. index, default)
+        if tContains(keys, key) and not used[key] then
             used[key] = true
             table.insert(order, key)
         end
     end
-
-    for i = 1, #keys do
-        local key = keys[i]
-        if not used[key] then
-            used[key] = true
-            table.insert(order, key)
-        end
+    for _, key in ipairs(keys) do
+        if not used[key] then table.insert(order, key) end
     end
     return order
 end
 
+function PersonalResource:GetBarOrderPrefix()
+    return PersonalResource:IsDruid() and "DRUIDBARSLOT" or "BARSLOT"
+end
+
 function PersonalResource:GetBarOrder()
-    if nativeFrame then
-        return BuildBarOrder("BARSLOT", BARKEYS, {
-            HEALTH = nativeFrame.HealthBarsContainer,
-            POWER = nativeFrame.PowerBar,
-            MANA = nativeFrame.AlternatePowerBar,
-            COMBO = nativeFrame.ClassFrameContainer
-        })
+    if not PersonalResource:IsDruid() then return BuildBarOrder("BARSLOT", BARKEYS) end
+    if PersonalResourceG and PersonalResourceG.DRUIDBARSLOT1 then return BuildBarOrder("DRUIDBARSLOT", DRUIDBARKEYS) end
+    local order = BuildBarOrder("BARSLOT", BARKEYS)
+    for index, key in ipairs(order) do
+        if key == "POWER" then order[index] = "ENERGY" end
     end
-    return BuildBarOrder("BARSLOT", BARKEYS, barTemplates)
+    table.insert(order, "RAGE")
+    return order
 end
 
 function PersonalResource:GetPetBarOrder()
-    return BuildBarOrder("PETBARSLOT", PETBARKEYS, petBarTemplates)
+    return BuildBarOrder("PETBARSLOT", PETBARKEYS)
 end
 
 function PersonalResource:UpdateComboLayout(width)
@@ -330,8 +352,53 @@ function PersonalResource:UpdateComboPoints()
     end
 end
 
+local function NativeHasComboPoints()
+    local _, class = UnitClass("player")
+    return class == "ROGUE" or class == "DRUID"
+end
+
+local function UpdateDruidBarText(bar, powerType)
+    local value = UnitPower("player", powerType)
+    local maximum = UnitPowerMax("player", powerType)
+    if powerType ~= MANAPOWERTYPE and PersonalResource:CanAccessValue(maximum) and maximum <= 0 then maximum = 100 end
+    bar.statusBar:SetMinMaxValues(0, maximum)
+    bar.statusBar:SetValue(value)
+    local showPercent, percent = GetPowerTextPercent("player", GetCfg("SHOWPOWERPERCENTAGE", true), GetResourceFraction(value, maximum), powerType)
+    SetBarTexts(bar, showPercent, percent, GetCfg("SHOWPOWERVALUE", true), GetCfg("SHOWMAXPOWERVALUE", false), value, maximum)
+end
+
+local function UpdateDruidBarValues()
+    for key, bar in pairs(druidBars) do
+        if bar.frame:IsShown() then UpdateDruidBarText(bar, DRUIDPOWERTYPES[key]) end
+    end
+end
+
+local function UpdateDruidExtraBars(parent, primaryType, hasMana)
+    for key, powerType in pairs(DRUIDPOWERTYPES) do
+        local enabled
+        if key == "MANA" then
+            enabled = nativeFrame and not nativeFrame.hideAltPower and not hasMana and AlwaysShowDruidPower() and PersonalResource:HasSecondaryMana()
+        else
+            enabled = PersonalResource:AlwaysShowDruidResource(key)
+        end
+        local shown = enabled and primaryType ~= powerType
+        local bar = druidBars[key]
+        if shown and not bar then
+            bar = PersonalResource:CreateBlizzardStyleUnitFrame(parent, 200, 19)
+            druidBars[key] = bar
+            bar.frame:EnableMouse(false)
+            bar.leftText:SetTextColor(1, 1, 1, 1)
+            bar.rightText:SetTextColor(1, 1, 1, 1)
+            local color = PowerBarColor and PowerBarColor[powerType]
+            if color then bar.statusBar:SetStatusBarColor(color.r, color.g, color.b) end
+        end
+        if bar then bar.frame:SetShown(not not shown) end
+    end
+    UpdateDruidBarValues()
+end
+
 local function UpdateNativeOrder()
-    if InCombatLockdown() then
+    if InCombatLockdown() and nativeFrame:IsProtected() then
         nativeLayoutPending = true
         return
     end
@@ -342,14 +409,32 @@ local function UpdateNativeOrder()
         MANA = nativeFrame.AlternatePowerBar,
         COMBO = nativeFrame.ClassFrameContainer
     }
+    local classBar = bars.COMBO
+    if PersonalResource:IsDruid() then
+        local primaryType = UnitPowerType("player")
+        local primaryKey = GetDruidPowerKey(primaryType) or "COMBO"
+        local alternate = bars.MANA
+        local duplicateMana = primaryKey == "MANA"
+        local hasAlternate = alternate and alternate:IsShown() and not duplicateMana
+        if alternate then alternate:SetAlpha(duplicateMana and 0 or 1) end
+        if not hasAlternate then bars.MANA = nil end
+        bars[primaryKey] = bars.POWER
+        UpdateDruidExtraBars(nativeFrame, primaryType, hasAlternate)
+        for key, bar in pairs(druidBars) do
+            if bar.frame:IsShown() then
+                PersonalResource:SetUnitFrameSize(bar, GetCfg("BARWIDTH", 200), GetCfg("BARHEIGHT", 19))
+                bars[key] = bar.frame
+            end
+        end
+    end
     local offset = 0
     local spacing = GetCfg("BARSPACING", 0)
     local hasBar = false
     for _, key in ipairs(PersonalResource:GetBarOrder()) do
         local bar = bars[key]
-        if bar and bar:IsShown() and (key ~= "COMBO" or not nativeFrame.HasClassInfo or nativeFrame:HasClassInfo()) then
+        if bar and bar:IsShown() and (bar ~= classBar or not nativeFrame.HasClassInfo or nativeFrame:HasClassInfo()) then
             if hasBar then offset = offset + spacing end
-            if key == "COMBO" then offset = offset - (bar.yOffset or 0) end
+            if bar == classBar and not NativeHasComboPoints() then offset = offset - (bar.yOffset or 0) end
             bar:ClearAllPoints()
             bar:SetPoint("TOP", nativeFrame, "TOP", 0, -offset)
             offset = offset + bar:GetHeight()
@@ -369,9 +454,33 @@ local function ScheduleNativeOrder()
     end)
 end
 
-local function NativeHasComboPoints()
-    local _, class = UnitClass("player")
-    return class == "ROGUE" or class == "DRUID"
+local function ShowNativeDruidDisplay()
+    if not AlwaysShowDruidPower() or nativeFrame:IsShown() then return end
+    if C_GameRules and C_GameRules.IsPersonalResourceDisplayEnabled and not C_GameRules.IsPersonalResourceDisplayEnabled() then return end
+    if not InCombatLockdown() or not nativeFrame:IsProtected() then nativeFrame:Show() end
+end
+
+local function SyncNativeDruidPowerBar()
+    local bar = nativeFrame.PowerBar
+    if not bar or nativeFrame.isInEditMode then return end
+    local alwaysShow = AlwaysShowDruidPower()
+    if not alwaysShow and not nativeDruidPowerActive then return end
+    local shown = alwaysShow or not nativeFrame.hidePower
+    if bar:IsShown() == shown then return end
+    if InCombatLockdown() and bar:IsProtected() then return end
+    bar:SetShown(shown)
+    ScheduleNativeOrder()
+end
+
+function PersonalResource:UpdateDruidPowerVisibility()
+    local alwaysShow = AlwaysShowDruidPower()
+    if nativeFrame and not nativeFrame.isInEditMode and (alwaysShow or nativeDruidPowerActive) then
+        nativeFrame:UpdateShownState()
+        SyncNativeDruidPowerBar()
+        if not InCombatLockdown() or alwaysShow then nativeDruidPowerActive = alwaysShow end
+    end
+    if nativeFrame then ScheduleNativeOrder() end
+    PersonalResource:UpdateVisibility()
 end
 
 local function UpdateNativeComboLayout()
@@ -405,7 +514,7 @@ local function UpdateNativeComboLayout()
     local size = GetCfg("COMBOPOINTSIZE", 20)
     local spacing = GetCfg("COMBOPOINTSPACING", 4)
     local step = size + spacing
-    nativeFrame.ClassFrameContainer:SetHeight(size)
+    nativeFrame.ClassFrameContainer:SetHeight(GetCfg("BARHEIGHT", 19))
     for index, point in ipairs(points) do
         local width = point:GetWidth() * point:GetScale()
         if width > 0 then point:SetScale(point:GetScale() * size / width) end
@@ -449,6 +558,8 @@ local function UpdateNativeText(bar, kind)
         showPercent, percent = GetHealthTextPercent("player", percentEnabled, fraction)
     elseif kind == "POWER" then
         showPercent, percent = GetPowerTextPercent("player", percentEnabled, fraction, UnitPowerType("player"))
+    elseif bar.powerType ~= nil then
+        showPercent, percent = GetPowerTextPercent("player", percentEnabled, fraction, bar.powerType)
     else
         showPercent, percent = percentEnabled and fraction ~= nil, (fraction or 0) * 100
     end
@@ -493,24 +604,31 @@ function PersonalResource:UpdateFrames()
     local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
     local showMana = PersonalResource:HasSecondaryMana()
     local showCombo = PersonalResource:HasComboPoints()
+    local templates = barTemplates
+    if PersonalResource:IsDruid() then
+        local powerType = UnitPowerType("player")
+        local primaryKey = GetDruidPowerKey(powerType) or "COMBO"
+        templates = {HEALTH = hpTemplate, MANA = manaTemplate, COMBO = barTemplates.COMBO}
+        templates[primaryKey] = powerTemplate
+        UpdateDruidExtraBars(frame, powerType, showMana)
+        for key, bar in pairs(druidBars) do
+            if bar.frame:IsShown() then templates[key] = bar end
+        end
+        if not showMana then manaTemplate.frame:Hide() end
+        if not showCombo then comboFrame:Hide() end
+    end
     local previous = nil
     local previousBottom = 0
     local total = 0
     for _, key in ipairs(PersonalResource:GetBarOrder()) do
-        local template = barTemplates[key]
-        local visible = true
-        if key == "MANA" then
-            visible = showMana
-        elseif key == "COMBO" then
-            visible = showCombo
-        end
-
-        if not visible then
+        local template = templates[key]
+        local visible = template and (template ~= manaTemplate or showMana) and (template.frame ~= comboFrame or showCombo)
+        if template and not visible then
             template.frame:Hide()
-        else
+        elseif visible then
             local barHeight = height
             local barTop, barBottom = overTop, overBottom
-            if key == "COMBO" then
+            if template.frame == comboFrame then
                 barHeight = PersonalResource:UpdateComboLayout(width)
                 barTop, barBottom = 0, 0
             else
@@ -763,7 +881,7 @@ function PersonalResource:UpdateVisibility()
     local playerDisplay = nativeFrame or frame
     if playerDisplay then
         local hideFull = ShouldHideWhenFull("HIDEWHENFULLHP", "HIDEWHENFULLPOWER", IsPlayerHealthFull(), IsPlayerPowerFull())
-        local alpha = GetVisibilityAlpha(playerDisplay, GetCfg("SHOWONHOVER", false), hideFull and not playerDisplay.isInEditMode)
+        local alpha = GetVisibilityAlpha(playerDisplay, GetCfg("SHOWONHOVER", false), hideFull and not playerDisplay.isInEditMode and not AlwaysShowDruidPower())
         if playerDisplay:GetAlpha() ~= alpha then playerDisplay:SetAlpha(alpha) end
         if frame then frame:EnableMouse(not locked and alpha > 0) end
     end
@@ -871,11 +989,22 @@ local initFrame = CreateFrame("Frame")
 initFrame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_ENTERING_WORLD" then
         self:UnregisterEvent(event)
-        C_Timer.After(0, function() PersonalResource:UpdateFrames() end)
+        C_Timer.After(0, function()
+            PersonalResource:UpdateDruidPowerVisibility()
+            PersonalResource:UpdateFrames()
+        end)
+        return
+    end
+    if event == "UNIT_POWER_UPDATE" or event == "UNIT_MAXPOWER" then
+        UpdateDruidBarValues()
+        return
+    end
+    if event == "UNIT_DISPLAYPOWER" then
+        PersonalResource:UpdateDruidPowerVisibility()
         return
     end
     if event == "PLAYER_REGEN_ENABLED" then
-        PersonalResource:UpdateVisibility()
+        PersonalResource:UpdateDruidPowerVisibility()
         if nativeLayoutPending then PersonalResource:UpdateFrames() end
         return
     end
@@ -884,7 +1013,17 @@ initFrame:SetScript("OnEvent", function(self, event)
     PersonalResource:SetVersion()
     PersonalResourceG = PersonalResourceG or {}
     nativeFrame = EnableNativeDisplay()
+    local _, class = UnitClass("player")
+    if class == "DRUID" then
+        PersonalResource:RegisterEvent(self, "UNIT_DISPLAYPOWER", "player")
+        PersonalResource:RegisterEvent(self, "UNIT_POWER_UPDATE", "player")
+        PersonalResource:RegisterEvent(self, "UNIT_MAXPOWER", "player")
+    end
     if nativeFrame then
+        if class == "DRUID" then
+            hooksecurefunc(nativeFrame, "UpdateShownState", ShowNativeDruidDisplay)
+            if nativeFrame.SetHidePower then hooksecurefunc(nativeFrame, "SetHidePower", SyncNativeDruidPowerBar) end
+        end
         if nativeFrame.UpdateFrameHeight then hooksecurefunc(nativeFrame, "UpdateFrameHeight", ScheduleNativeOrder) end
         if nativeFrame.UpdateHealth then
             hooksecurefunc(nativeFrame, "UpdateHealth", function()
@@ -910,7 +1049,10 @@ initFrame:SetScript("OnEvent", function(self, event)
             hooksecurefunc(nativeFrame, "SetIsInEditMode", function(_, editing)
                 PersonalResource:UpdateVisibility()
                 if not editing then
-                    C_Timer.After(0, function() PersonalResource:UpdateFrames() end)
+                    C_Timer.After(0, function()
+                        PersonalResource:UpdateDruidPowerVisibility()
+                        PersonalResource:UpdateFrames()
+                    end)
                 end
             end)
         end
@@ -919,6 +1061,7 @@ initFrame:SetScript("OnEvent", function(self, event)
         RegisterPlayerEvents()
     end
     PersonalResource:InitSettings()
+    if class == "DRUID" then PersonalResource:UpdateDruidPowerVisibility() end
     PersonalResource:UpdateAll()
     RestoreFramePosition(petFrame, "petFrame")
 end)

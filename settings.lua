@@ -3,52 +3,15 @@ local _, PersonalResource = ...
 local prset = nil
 local DEFAULT_WIDTH = 420
 local DEFAULT_HEIGHT = 400
-local BARKEYS = {"HEALTH", "POWER", "MANA", "COMBO"}
-local BARCHOICES = {
-    {
-        ["value"] = "HEALTH",
-        ["label"] = "LID_HEALTH"
-    },
-    {
-        ["value"] = "POWER",
-        ["label"] = "LID_POWER"
-    },
-    {
-        ["value"] = "MANA",
-        ["label"] = "LID_MANA"
-    },
-    {
-        ["value"] = "COMBO",
-        ["label"] = "LID_COMBOPOINTS"
-    }
+local BARLABELS = {
+    HEALTH = "LID_HEALTH",
+    POWER = "LID_POWER",
+    MANA = "LID_MANA",
+    ENERGY = ENERGY,
+    RAGE = RAGE,
+    COMBO = "LID_COMBOPOINTS"
 }
 
-local PETBARKEYS = {"HEALTH", "POWER"}
-local PETBARCHOICES = {
-    {
-        ["value"] = "HEALTH",
-        ["label"] = "LID_HEALTH"
-    },
-    {
-        ["value"] = "POWER",
-        ["label"] = "LID_POWER"
-    }
-}
-
-local SLOTKEYS = {
-    ["BARSLOT"] = BARKEYS,
-    ["PETBARSLOT"] = PETBARKEYS
-}
-
-local SLOTCHOICES = {
-    ["BARSLOT"] = BARCHOICES,
-    ["PETBARSLOT"] = PETBARCHOICES
-}
-
-local slotHolders = {
-    ["BARSLOT"] = {},
-    ["PETBARSLOT"] = {}
-}
 function PersonalResource:ToggleSettings()
     if prset == nil then return end
     prset:Toggle()
@@ -135,36 +98,27 @@ local function AddVisibilityOptions(prefix)
     end)
 end
 
-local function GetBarSlot(prefix, index)
-    return PersonalResource:GV(PersonalResourceG, prefix .. index, SLOTKEYS[prefix][index])
-end
-
-local function SetBarSlot(prefix, index, value)
-    local old = GetBarSlot(prefix, index)
-    if old == value then return end
-    local holders = slotHolders[prefix]
-    for i = 1, #SLOTKEYS[prefix] do
-        if i ~= index and GetBarSlot(prefix, i) == value then
-            PersonalResource:SV(PersonalResourceG, prefix .. i, old)
-            if holders[i] then holders[i]:SetValue(old) end
+local function AddBarOrder(prefix, category, order)
+    local items = {}
+    local native = PersonalResource:UsesNativeDisplay()
+    for _, key in ipairs(order) do
+        local label = BARLABELS[key]
+        if native and prefix == "BARSLOT" then
+            if key == "MANA" then label = "LID_ALTERNATEPOWER" end
+            if key == "COMBO" then label = "LID_CLASSRESOURCE" end
         end
+        items[#items + 1] = {key = key, label = label, checkable = false}
     end
-
-    PersonalResource:SV(PersonalResourceG, prefix .. index, value)
-    PersonalResource:UpdateAll()
-end
-
-local function AddBarSlot(prefix, index)
-    slotHolders[prefix][index] = prset:AddDropdown({
-        ["label"] = "LID_" .. prefix .. index,
-        ["search"] = prefix .. index,
-        ["value"] = GetBarSlot(prefix, index),
-        ["choices"] = prefix == "BARSLOT" and PersonalResource:UsesNativeDisplay() and {
-            BARCHOICES[1], BARCHOICES[2],
-            {value = "MANA", label = "LID_ALTERNATEPOWER"},
-            {value = "COMBO", label = "LID_CLASSRESOURCE"}
-        } or SLOTCHOICES[prefix],
-        ["func"] = function(value) SetBarSlot(prefix, index, value) end
+    prset:AddOrderList({
+        label = "LID_" .. category,
+        search = category,
+        items = items,
+        func = function(orderedItems)
+            for index, item in ipairs(orderedItems) do
+                PersonalResource:SV(PersonalResourceG, prefix .. index, item.key)
+            end
+            PersonalResource:UpdateAll()
+        end
     })
 end
 
@@ -206,15 +160,20 @@ function PersonalResource:InitSettings()
     AddSlider("SPACING", "BARSPACING", 0, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
     AddCategory("VISIBILITY", 2)
     AddVisibilityOptions("")
+    if PersonalResource:IsDruid() then
+        local function UpdateDruidBars()
+            PersonalResource:UpdateDruidPowerVisibility()
+            PersonalResource:UpdateAll()
+        end
+        AddCheckbox("ALWAYSSHOWDRUIDENERGY", "ALWAYSSHOWDRUIDENERGY", PersonalResource:AlwaysShowDruidResource("ENERGY"), UpdateDruidBars)
+        AddCheckbox("ALWAYSSHOWDRUIDRAGE", "ALWAYSSHOWDRUIDRAGE", PersonalResource:AlwaysShowDruidResource("RAGE"), UpdateDruidBars)
+    end
     AddCategory("COMBOPOINTS", 2)
     AddCheckbox("SHOWCOMBOPOINTS", "SHOWCOMBOPOINTS", true, function() PersonalResource:UpdateAll() end)
     AddSlider("COMBOSIZE", "COMBOPOINTSIZE", 20, 6, 48, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("COMBOSPACING", "COMBOPOINTSPACING", 4, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
     AddCategory("BARORDER", 2)
-    AddBarSlot("BARSLOT", 1)
-    AddBarSlot("BARSLOT", 2)
-    AddBarSlot("BARSLOT", 3)
-    AddBarSlot("BARSLOT", 4)
+    AddBarOrder(PersonalResource:GetBarOrderPrefix(), "BARORDER", PersonalResource:GetBarOrder())
     AddCategory("TEXT")
     AddCategory("HEALTH", 2)
     AddCheckbox("SHOWHEALTHVALUE", "SHOWHEALTHVALUE", true, function() PersonalResource:UpdateAll() end)
@@ -235,8 +194,7 @@ function PersonalResource:InitSettings()
     AddCategory("PETVISIBILITY", 2)
     AddVisibilityOptions("PET")
     AddCategory("PETBARORDER", 2)
-    AddBarSlot("PETBARSLOT", 1)
-    AddBarSlot("PETBARSLOT", 2)
+    AddBarOrder("PETBARSLOT", "PETBARORDER", PersonalResource:GetPetBarOrder())
     AddCategory("PETTEXT")
     AddCategory("PETHEALTH", 2)
     AddCheckbox("SHOWPETHEALTHVALUE", "SHOWPETHEALTHVALUE", true, function() PersonalResource:UpdateAll() end)
