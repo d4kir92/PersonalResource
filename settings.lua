@@ -7,8 +7,8 @@ local BARLABELS = {
     HEALTH = "LID_HEALTH",
     POWER = "LID_POWER",
     MANA = "LID_MANA",
-    ENERGY = ENERGY,
-    RAGE = RAGE,
+    ENERGY = "LID_ALWAYSSHOWDRUIDENERGY",
+    RAGE = "LID_ALWAYSSHOWDRUIDRAGE",
     COMBO = "LID_COMBOPOINTS"
 }
 
@@ -103,7 +103,11 @@ local function AddBarOrder(prefix, category, order)
     local native = PersonalResource:UsesNativeDisplay()
     for _, key in ipairs(order) do
         local label = BARLABELS[key]
-        if native and prefix == "BARSLOT" then
+        if prefix == "DRUIDBARSLOT" and key == "POWER" then
+            label = "LID_ALTERNATEPOWER"
+        elseif prefix == "DRUIDBARSLOT" and key == "MANA" then
+            label = "LID_POWER"
+        elseif native and prefix == "BARSLOT" then
             if key == "MANA" then label = "LID_ALTERNATEPOWER" end
             if key == "COMBO" then label = "LID_CLASSRESOURCE" end
         end
@@ -171,7 +175,10 @@ function PersonalResource:InitSettings()
     AddCategory("COMBOPOINTS", 2)
     AddCheckbox("SHOWCOMBOPOINTS", "SHOWCOMBOPOINTS", true, function() PersonalResource:UpdateAll() end)
     if PersonalResource:IsDruid() then
-        AddCheckbox("ALWAYSSHOWDRUIDCOMBO", "ALWAYSSHOWDRUIDCOMBO", false, function() PersonalResource:UpdateAll() end)
+        AddCheckbox("ALWAYSSHOWDRUIDCOMBO", "ALWAYSSHOWDRUIDCOMBO", false, function()
+            PersonalResource:UpdateDruidPowerVisibility()
+            PersonalResource:UpdateAll()
+        end)
     end
     AddSlider("COMBOSIZE", "COMBOPOINTSIZE", 20, 6, 48, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("COMBOSPACING", "COMBOPOINTSPACING", 4, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
