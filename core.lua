@@ -979,13 +979,17 @@ local function GetFullResourceAlpha(current, maximum)
 end
 
 local function GetHealthVisibilityAlpha(unit)
+    local alpha = GetFullResourceAlpha(UnitHealth(unit), UnitHealthMax(unit))
+    if alpha ~= nil then return alpha end
     if fullResourceCurve and UnitHealthPercent then return UnitHealthPercent(unit, false, fullResourceCurve) end
-    return GetFullResourceAlpha(UnitHealth(unit), UnitHealthMax(unit)) or 1
+    return 1
 end
 
 local function GetPowerVisibilityAlpha(unit, powerType)
+    local alpha = GetFullResourceAlpha(UnitPower(unit, powerType), UnitPowerMax(unit, powerType))
+    if alpha ~= nil then return alpha end
     if fullResourceCurve and UnitPowerPercent then return UnitPowerPercent(unit, powerType, false, fullResourceCurve) end
-    return GetFullResourceAlpha(UnitPower(unit, powerType), UnitPowerMax(unit, powerType)) or 1
+    return 1
 end
 
 local function CombineVisibilityAlpha(first, second)
@@ -1019,8 +1023,8 @@ end
 local function GetVisibilityAlpha(target, unit, prefix, bypassFull)
     local hideHealth = GetCfg(prefix .. "HIDEWHENFULLHP", false)
     local hidePower = GetCfg(prefix .. "HIDEWHENFULLPOWER", false)
-    if bypassFull or (not hideHealth and not hidePower) then return 1, 1 end
-    if GetCfg(prefix .. "SHOWONHOVER", false) and IsHovered(target) then return 1, 1 end
+    if bypassFull or (not hideHealth and not hidePower) then return 1 end
+    if GetCfg(prefix .. "SHOWONHOVER", false) and IsHovered(target) then return 1 end
     local health = 0
     if hideHealth then health = GetHealthVisibilityAlpha(unit) end
     local power = 0
@@ -1031,9 +1035,7 @@ local function GetVisibilityAlpha(target, unit, prefix, bypassFull)
             power = GetPowerVisibilityAlpha(unit)
         end
     end
-    local healthAlpha = 1
-    if hideHealth then healthAlpha = health end
-    return CombineVisibilityAlpha(health, power), healthAlpha
+    return CombineVisibilityAlpha(health, power)
 end
 
 local function NeedsVisibilityUpdates()
@@ -1047,10 +1049,8 @@ function PersonalResource:UpdateVisibility()
     local locked = GetCfg("LOCKED", false)
     local playerDisplay = nativeFrame or frame
     if playerDisplay then
-        local alpha, healthAlpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode)
+        local alpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode)
         playerDisplay:SetAlpha(alpha)
-        local healthDisplay = nativeFrame and nativeFrame.HealthBarsContainer or (hpTemplate and hpTemplate.frame)
-        if healthDisplay then healthDisplay:SetAlpha(healthAlpha) end
         if frame then frame:EnableMouse(not locked and (not PersonalResource:CanAccessValue(alpha) or alpha > 0)) end
     end
     local petAlpha = GetVisibilityAlpha(petFrame, "pet", "PET", not petFrame:IsShown())
