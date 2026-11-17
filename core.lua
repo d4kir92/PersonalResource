@@ -1001,25 +1001,6 @@ local function CombineVisibilityAlpha(first, second)
     return 1
 end
 
-local function GetPlayerPowerVisibilityAlpha()
-    local primary = GetPowerVisibilityAlpha("player")
-    if nativeFrame then
-        local alternate = nativeFrame.AlternatePowerBar
-        if alternate and alternate:IsShown() and (not PersonalResource:IsDruid() or UnitPowerType("player") ~= MANAPOWERTYPE) then
-            local alpha
-            if type(alternate.powerType) == "number" and PersonalResource:CanAccessValue(alternate.powerType) then
-                alpha = GetPowerVisibilityAlpha("player", alternate.powerType)
-            else
-                alpha = GetFullResourceAlpha(alternate:GetValue(), select(2, alternate:GetMinMaxValues())) or 1
-            end
-            return CombineVisibilityAlpha(primary, alpha)
-        end
-    elseif PersonalResource:HasSecondaryMana() then
-        return CombineVisibilityAlpha(primary, GetPowerVisibilityAlpha("player", MANAPOWERTYPE))
-    end
-    return primary
-end
-
 local function GetVisibilityAlpha(target, unit, prefix, bypassFull)
     local hideHealth = GetCfg(prefix .. "HIDEWHENFULLHP", false)
     local hidePower = GetCfg(prefix .. "HIDEWHENFULLPOWER", false)
@@ -1028,13 +1009,7 @@ local function GetVisibilityAlpha(target, unit, prefix, bypassFull)
     local health = 0
     if hideHealth then health = GetHealthVisibilityAlpha(unit) end
     local power = 0
-    if hidePower then
-        if unit == "player" then
-            power = GetPlayerPowerVisibilityAlpha()
-        else
-            power = GetPowerVisibilityAlpha(unit)
-        end
-    end
+    if hidePower then power = GetPowerVisibilityAlpha(unit) end
     return CombineVisibilityAlpha(health, power)
 end
 
