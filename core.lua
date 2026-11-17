@@ -1019,8 +1019,8 @@ end
 local function GetVisibilityAlpha(target, unit, prefix, bypassFull)
     local hideHealth = GetCfg(prefix .. "HIDEWHENFULLHP", false)
     local hidePower = GetCfg(prefix .. "HIDEWHENFULLPOWER", false)
-    if bypassFull or (not hideHealth and not hidePower) then return 1 end
-    if GetCfg(prefix .. "SHOWONHOVER", false) and IsHovered(target) then return 1 end
+    if bypassFull or (not hideHealth and not hidePower) then return 1, 1 end
+    if GetCfg(prefix .. "SHOWONHOVER", false) and IsHovered(target) then return 1, 1 end
     local health = 0
     if hideHealth then health = GetHealthVisibilityAlpha(unit) end
     local power = 0
@@ -1031,7 +1031,9 @@ local function GetVisibilityAlpha(target, unit, prefix, bypassFull)
             power = GetPowerVisibilityAlpha(unit)
         end
     end
-    return CombineVisibilityAlpha(health, power)
+    local healthAlpha = 1
+    if hideHealth then healthAlpha = health end
+    return CombineVisibilityAlpha(health, power), healthAlpha
 end
 
 local function NeedsVisibilityUpdates()
@@ -1045,8 +1047,10 @@ function PersonalResource:UpdateVisibility()
     local locked = GetCfg("LOCKED", false)
     local playerDisplay = nativeFrame or frame
     if playerDisplay then
-        local alpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode)
+        local alpha, healthAlpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode)
         playerDisplay:SetAlpha(alpha)
+        local healthDisplay = nativeFrame and nativeFrame.HealthBarsContainer or (hpTemplate and hpTemplate.frame)
+        if healthDisplay then healthDisplay:SetAlpha(healthAlpha) end
         if frame then frame:EnableMouse(not locked and (not PersonalResource:CanAccessValue(alpha) or alpha > 0)) end
     end
     local petAlpha = GetVisibilityAlpha(petFrame, "pet", "PET", not petFrame:IsShown())
