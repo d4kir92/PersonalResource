@@ -526,13 +526,9 @@ local function UpdateNativeOrder()
         if visible then
             if hasBar then offset = offset + spacing end
             if bar == classBar and not NativeHasComboPoints() then offset = offset - (bar.yOffset or 0) end
-            local extra = druid and druidBars[key]
-            local top, bottom = PersonalResource:GetUnitFrameOverhang()
-            if extra and bar == extra.frame then offset = offset + top end
             bar:ClearAllPoints()
             bar:SetPoint("TOP", nativeFrame, "TOP", 0, -offset)
             offset = offset + (druid and slotHeight or bar:GetHeight())
-            if extra and bar == extra.frame then offset = offset + bottom end
             hasBar = true
         end
     end
