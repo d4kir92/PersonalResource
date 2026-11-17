@@ -451,6 +451,8 @@ function D4:CreateMinimapButton(params)
                 oldState = shouldShow
                 if not shouldShow then
                     btn.fadeIn:Stop()
+                    animOut:SetStartDelay(hideWithLeatrix and 1 or 0.1)
+                    animOut:SetDuration(hideWithLeatrix and 0.2 or 0.1)
                     btn.fadeOut:Play()
                 elseif onMinimap then
                     btn.fadeOut:Stop()
