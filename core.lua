@@ -227,7 +227,7 @@ local function CreatePlayerFrame()
     manaBar = manaTemplate.statusBar
     manaTemplate.leftText:SetTextColor(1, 1, 1, 1)
     manaTemplate.rightText:SetTextColor(1, 1, 1, 1)
-    comboFrame = CreateFrame("Frame", nil, frame)
+    comboFrame = CreateFrame("Frame", "PersonalResourceComboFrame", frame)
     comboFrame:SetSize(200, 20)
     comboFrame:SetPoint("TOP", manaTemplate.frame, "BOTTOM", 0, -5)
     comboFrame:Hide()
@@ -500,7 +500,7 @@ local function UpdateNativeOrder()
             and (not nativeFrame.HasClassInfo or nativeFrame:HasClassInfo())
             and classFrame.classResourceButtonTable and #classFrame.classResourceButtonTable > 0
         if DruidComboAlwaysShown() and not nativeComboShown and GetNativeComboPointSetup(classFrame) then
-            if not comboFrame then comboFrame = CreateFrame("Frame", nil, nativeFrame) end
+            if not comboFrame then comboFrame = CreateFrame("Frame", "PersonalResourceComboFrame", nativeFrame) end
             PersonalResource:UpdateComboLayout(GetCfg("BARWIDTH", 200))
             comboFrame:SetHeight(slotHeight)
             comboFrame:Show()
@@ -526,9 +526,13 @@ local function UpdateNativeOrder()
         if visible then
             if hasBar then offset = offset + spacing end
             if bar == classBar and not NativeHasComboPoints() then offset = offset - (bar.yOffset or 0) end
+            local extra = druid and druidBars[key]
+            local top, bottom = PersonalResource:GetUnitFrameOverhang()
+            if extra and bar == extra.frame then offset = offset + top end
             bar:ClearAllPoints()
             bar:SetPoint("TOP", nativeFrame, "TOP", 0, -offset)
             offset = offset + (druid and slotHeight or bar:GetHeight())
+            if extra and bar == extra.frame then offset = offset + bottom end
             hasBar = true
         end
     end
