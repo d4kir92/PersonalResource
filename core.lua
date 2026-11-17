@@ -978,14 +978,25 @@ local function GetFullResourceAlpha(current, maximum)
     return (maximum <= 0 or current >= maximum) and 0 or 1
 end
 
-local function GetHealthVisibilityAlpha(unit)
+local function GetBarFullResourceAlpha(bar)
+    if not bar then return nil end
+    local _, maximum = bar:GetMinMaxValues()
+    return GetFullResourceAlpha(bar:GetValue(), maximum)
+end
+
+local function GetHealthVisibilityAlpha(unit, bar)
+    local barAlpha = GetBarFullResourceAlpha(bar)
+    if barAlpha ~= nil then return barAlpha end
     local alpha = GetFullResourceAlpha(UnitHealth(unit), UnitHealthMax(unit))
     if alpha ~= nil then return alpha end
-    if fullResourceCurve and UnitHealthPercent then return UnitHealthPercent(unit, false, fullResourceCurve) end
+    if fullResourceCurve and UnitHealthPercent then return UnitHealthPercent(unit, true, fullResourceCurve) end
     return 1
 end
 
-local function GetPowerVisibilityAlpha(unit, powerType)
+local function GetPowerVisibilityAlpha(unit, bar)
+    local barAlpha = GetBarFullResourceAlpha(bar)
+    if barAlpha ~= nil then return barAlpha end
+    local powerType = UnitPowerType(unit)
     local alpha = GetFullResourceAlpha(UnitPower(unit, powerType), UnitPowerMax(unit, powerType))
     if alpha ~= nil then return alpha end
     if fullResourceCurve and UnitPowerPercent then return UnitPowerPercent(unit, powerType, false, fullResourceCurve) end
@@ -1001,15 +1012,15 @@ local function CombineVisibilityAlpha(first, second)
     return 1
 end
 
-local function GetVisibilityAlpha(target, unit, prefix, bypassFull)
+local function GetVisibilityAlpha(target, unit, prefix, bypassFull, healthBar, primaryBar)
     local hideHealth = GetCfg(prefix .. "HIDEWHENFULLHP", false)
     local hidePower = GetCfg(prefix .. "HIDEWHENFULLPOWER", false)
     if bypassFull or (not hideHealth and not hidePower) then return 1 end
     if GetCfg(prefix .. "SHOWONHOVER", false) and IsHovered(target) then return 1 end
     local health = 0
-    if hideHealth then health = GetHealthVisibilityAlpha(unit) end
+    if hideHealth then health = GetHealthVisibilityAlpha(unit, healthBar) end
     local power = 0
-    if hidePower then power = GetPowerVisibilityAlpha(unit) end
+    if hidePower then power = GetPowerVisibilityAlpha(unit, primaryBar) end
     return CombineVisibilityAlpha(health, power)
 end
 
@@ -1024,7 +1035,9 @@ function PersonalResource:UpdateVisibility()
     local locked = GetCfg("LOCKED", false)
     local playerDisplay = nativeFrame or frame
     if playerDisplay then
-        local alpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode)
+        local healthBar = nativeFrame and nativeFrame.HealthBarsContainer and nativeFrame.HealthBarsContainer.healthBar
+        local primaryBar = nativeFrame and nativeFrame.PowerBar
+        local alpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode, healthBar, primaryBar)
         playerDisplay:SetAlpha(alpha)
         if frame then frame:EnableMouse(not locked and (not PersonalResource:CanAccessValue(alpha) or alpha > 0)) end
     end
