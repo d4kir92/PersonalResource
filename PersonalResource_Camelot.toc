@@ -1,5 +1,5 @@
 ## Interface: 16001
-## Version: 0.3.0
+## Version: 0.3.1
 ## Title: PersonalResource by |cff55d2ffD4KiR |T132115:16:16:0:0|t
 ## Notes: Show Personal Resource Info (Health, Mana, Energy, Rage, ...)
 ## Notes-deDE: Zeigt die persönlichen Resourcen an (Gesundheit, Mana, Energie, Wut, ...)
