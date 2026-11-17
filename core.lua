@@ -437,7 +437,7 @@ local function UpdateDruidExtraBars(parent, primaryType, hasMana)
         local shown = enabled and primaryType ~= powerType
         local bar = druidBars[key]
         if shown and not bar then
-            bar = PersonalResource:CreateBlizzardStyleUnitFrame(parent, 200, 19)
+            bar = PersonalResource:CreateBlizzardStyleUnitFrame(parent, 200, 19, true)
             druidBars[key] = bar
             bar.frame:EnableMouse(false)
             bar.leftText:SetTextColor(1, 1, 1, 1)
