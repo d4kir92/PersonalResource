@@ -94,7 +94,7 @@ function PersonalResource:SetComboPointFull(point, full)
     point.bgInactive:SetShown(not full)
 end
 
-function PersonalResource:CreateBlizzardStyleUnitFrame(parent, width, height, useNativeBorder)
+function PersonalResource:CreateBlizzardStyleUnitFrame(parent, width, height, useNativeBorder, fontTemplate)
     local frame = CreateFrame("Frame", nil, parent)
     frame:SetSize(width, height)
     frame:SetScale(1)
@@ -119,15 +119,17 @@ function PersonalResource:CreateBlizzardStyleUnitFrame(parent, width, height, us
     local textFrame = CreateFrame("Frame", nil, frame)
     textFrame:SetSize(width, height)
     textFrame:SetPoint("CENTER", frame, "CENTER")
-    local leftText = textFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local leftText = textFrame:CreateFontString(nil, "OVERLAY", fontTemplate or "GameFontNormal")
     leftText:SetPoint("LEFT", textFrame, "LEFT", 4, 0)
     leftText:SetJustifyH("LEFT")
-    local rightText = textFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local rightText = textFrame:CreateFontString(nil, "OVERLAY", fontTemplate or "GameFontNormal")
     rightText:SetPoint("RIGHT", textFrame, "RIGHT", -4, 0)
     rightText:SetJustifyH("RIGHT")
-    for _, text in ipairs({leftText, rightText}) do
-        local font, size = text:GetFont()
-        text:SetFont(font, size, "OUTLINE")
+    if not fontTemplate then
+        for _, text in ipairs({leftText, rightText}) do
+            local font, size = text:GetFont()
+            text:SetFont(font, size, "OUTLINE")
+        end
     end
     return {
         frame = frame,

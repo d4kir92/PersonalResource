@@ -437,7 +437,7 @@ local function UpdateDruidExtraBars(parent, primaryType, hasMana)
         local shown = enabled and primaryType ~= powerType
         local bar = druidBars[key]
         if shown and not bar then
-            bar = PersonalResource:CreateBlizzardStyleUnitFrame(parent, 200, 19, true)
+            bar = PersonalResource:CreateBlizzardStyleUnitFrame(parent, 200, 19, true, nativeFrame and "TextStatusBarText")
             druidBars[key] = bar
             bar.frame:EnableMouse(false)
             bar.leftText:SetTextColor(1, 1, 1, 1)
@@ -499,7 +499,18 @@ local function UpdateNativeOrder()
         local nativeComboShown = classFrame and classBar and classBar:IsShown() and classFrame:IsShown()
             and (not nativeFrame.HasClassInfo or nativeFrame:HasClassInfo())
             and classFrame.classResourceButtonTable and #classFrame.classResourceButtonTable > 0
-        if DruidComboAlwaysShown() and not nativeComboShown and GetNativeComboPointSetup(classFrame) then
+        local useAlwaysCombo = DruidComboAlwaysShown() and GetNativeComboPointSetup(classFrame)
+            and (not nativeComboShown or (primaryType == ENERGYPOWERTYPE and PersonalResource:CanAccessValue(GetCurrentComboPoints())))
+        if classBar then
+            if useAlwaysCombo then
+                if classBar.personalResourceComboAlpha == nil then classBar.personalResourceComboAlpha = classBar:GetAlpha() end
+                classBar:SetAlpha(0)
+            elseif classBar.personalResourceComboAlpha ~= nil then
+                classBar:SetAlpha(classBar.personalResourceComboAlpha)
+                classBar.personalResourceComboAlpha = nil
+            end
+        end
+        if useAlwaysCombo then
             if not comboFrame then comboFrame = CreateFrame("Frame", "PersonalResourceComboFrame", nativeFrame) end
             PersonalResource:UpdateComboLayout(GetCfg("BARWIDTH", 200))
             comboFrame:SetHeight(slotHeight)
