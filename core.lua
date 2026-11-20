@@ -241,20 +241,30 @@ end
 local petFrame = CreateMovableFrame("PersonalResourcePetFrame", "petFrame")
 petFrame:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 300)
 petFrame:Hide()
-local petHPTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(petFrame, 150, 14)
-petHPTemplate.frame:SetPoint("TOP", petFrame, "TOP", 0, 0)
-local petHPBar = petHPTemplate.statusBar
-petHPTemplate.leftText:SetTextColor(1, 1, 1, 1)
-petHPTemplate.rightText:SetTextColor(1, 1, 1, 1)
-local petPowerTemplate = PersonalResource:CreateBlizzardStyleUnitFrame(petFrame, 150, 14)
-petPowerTemplate.frame:SetPoint("TOP", petHPTemplate.frame, "BOTTOM", 0, -5)
-local petPowerBar = petPowerTemplate.statusBar
-petPowerTemplate.leftText:SetTextColor(1, 1, 1, 1)
-petPowerTemplate.rightText:SetTextColor(1, 1, 1, 1)
-local petBarTemplates = {
-    ["HEALTH"] = petHPTemplate,
-    ["POWER"] = petPowerTemplate
-}
+local petBarTemplates = {}
+local function EnsurePetBars()
+    if petBarTemplates.HEALTH then return end
+    for _, key in ipairs(PETBARKEYS) do
+        local template = PersonalResource:CreateBlizzardStyleUnitFrame(petFrame, 150, 14, nativeFrame ~= nil, nativeFrame and "TextStatusBarText")
+        template.leftText:SetTextColor(1, 1, 1, 1)
+        template.rightText:SetTextColor(1, 1, 1, 1)
+        petBarTemplates[key] = template
+    end
+end
+
+local function GetPetHealthColor()
+    local color = nativeFrame and PERSONAL_RESOURCE_DISPLAY_DEFAULT_HEALTH_COLOR
+    if color and color.GetRGB then return color:GetRGB() end
+    return 0.2, 1, 0.2
+end
+
+local function GetPetPowerColor(powerType, powerToken)
+    local color
+    if nativeFrame and powerToken then color = (MANA_BAR_COLOR and MANA_BAR_COLOR[powerToken]) or (PowerBarColor and PowerBarColor[powerToken]) end
+    color = color or (PowerBarColor and PowerBarColor[powerType])
+    if color then return color.r, color.g, color.b end
+    return 0.0, 0.0, 1.0
+end
 
 function PersonalResource:HasSecondaryMana()
     local unit = "player"
@@ -866,6 +876,7 @@ end
 
 function PersonalResource:HasPet()
     local unit = "pet"
+    if not frame and not nativeFrame then return false end
     if not GetCfg("SHOWPETFRAME", true) then return false end
     if not UnitExists(unit) then return false end
     local dead = UnitIsDead(unit)
@@ -881,6 +892,7 @@ function PersonalResource:UpdatePetFrames()
         return
     end
 
+    EnsurePetBars()
     local width = GetCfg("PETBARWIDTH", 150)
     local height = GetCfg("PETBARHEIGHT", 14)
     local spacing = GetCfg("PETBARSPACING", 0)
@@ -916,37 +928,37 @@ end
 
 function PersonalResource:UpdatePetHealth()
     if not PersonalResource:HasPet() then return end
+    EnsurePetBars()
     local unit = "pet"
+    local template = petBarTemplates.HEALTH
+    local bar = template.statusBar
     local hp = UnitHealth(unit)
     local maxHP = UnitHealthMax(unit)
-    petHPBar:SetMinMaxValues(0, maxHP)
-    petHPBar:SetValue(hp)
+    bar:SetMinMaxValues(0, maxHP)
+    bar:SetValue(hp)
     local fraction = GetResourceFraction(hp, maxHP)
-    local r, g, b = 0.2, 1, 0.2
+    local r, g, b = GetPetHealthColor()
     if GetCfg("SMARTWARNINGCOLORS", false) and fraction and fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
-    petHPBar:SetStatusBarColor(r, g, b, 1.0)
+    bar:SetStatusBarColor(r, g, b, 1.0)
     local showPercent, percent = GetHealthTextPercent(unit, GetCfg("SHOWPETHEALTHPERCENTAGE", true), fraction)
-    SetBarTexts(petHPTemplate, showPercent, percent, GetCfg("SHOWPETHEALTHVALUE", true), GetCfg("SHOWPETMAXHEALTHVALUE", false), hp, maxHP)
+    SetBarTexts(template,showPercent, percent, GetCfg("SHOWPETHEALTHVALUE", true), GetCfg("SHOWPETMAXHEALTHVALUE", false), hp, maxHP)
 end
 
 function PersonalResource:UpdatePetPower()
     if not PersonalResource:HasPet() then return end
+    EnsurePetBars()
     local unit = "pet"
+    local template = petBarTemplates.POWER
+    local bar = template.statusBar
     local power = UnitPower(unit)
     local maxPower = UnitPowerMax(unit)
-    petPowerBar:SetMinMaxValues(0, maxPower)
-    petPowerBar:SetValue(power)
+    bar:SetMinMaxValues(0, maxPower)
+    bar:SetValue(power)
     local fraction = GetResourceFraction(power, maxPower)
-    local powerType = UnitPowerType(unit)
-    if PowerBarColor and PowerBarColor[powerType] then
-        local color = PowerBarColor[powerType]
-        petPowerBar:SetStatusBarColor(color.r, color.g, color.b, 1.0)
-    else
-        petPowerBar:SetStatusBarColor(0.0, 0.0, 1.0, 1.0)
-    end
-
-    local showPercent, percent = GetPowerTextPercent(unit, GetCfg("SHOWPETPOWERPERCENTAGE", true), fraction)
-    SetBarTexts(petPowerTemplate, showPercent, percent, GetCfg("SHOWPETPOWERVALUE", true), GetCfg("SHOWPETMAXPOWERVALUE", false), power, maxPower)
+    local powerType, powerToken = UnitPowerType(unit)
+    bar:SetStatusBarColor(GetPetPowerColor(powerType, powerToken))
+    local showPercent, percent = GetPowerTextPercent(unit, GetCfg("SHOWPETPOWERPERCENTAGE", true), fraction, powerType)
+    SetBarTexts(template,showPercent, percent, GetCfg("SHOWPETPOWERVALUE", true), GetCfg("SHOWPETMAXPOWERVALUE", false), power, maxPower)
 end
 
 function PersonalResource:UpdatePet()
