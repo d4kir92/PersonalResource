@@ -898,6 +898,7 @@ function PersonalResource:UpdatePetFrames()
     local spacing = GetCfg("PETBARSPACING", 0)
     local overTop, overBottom = PersonalResource:GetUnitFrameOverhang()
     local gap = spacing + overTop + overBottom
+    if nativeFrame then gap = spacing end
     local maxPower = UnitPowerMax("pet")
     local showPower = not PersonalResource:CanAccessValue(maxPower) or maxPower > 0
     local previous = nil
