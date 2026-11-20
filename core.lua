@@ -195,12 +195,6 @@ local function EnableNativeDisplay()
         setCVar("nameplateShowSelf", "1")
     end
     if C_GameRules and C_GameRules.IsPersonalResourceDisplayEnabled and not C_GameRules.IsPersonalResourceDisplayEnabled() then return end
-    local visibility = Enum and Enum.PersonalResourceDisplayVisibleSetting
-    if visibility and visibility.Never and display.GetVisibleSetting and display.SetVisibleSetting and display:GetVisibleSetting() == visibility.Never then
-        display:SetVisibleSetting(visibility.Always)
-    else
-        display:UpdateShownState()
-    end
     return display
 end
 
@@ -573,7 +567,7 @@ local function ScheduleNativeOrder()
 end
 
 local function ShowNativeDruidDisplay()
-    if nativeFrame:IsShown() or (not AlwaysShowDruidPower() and not DruidComboAlwaysShown()) then return end
+    if not nativeFrame.hasBeenSetup or nativeFrame:IsShown() or (not AlwaysShowDruidPower() and not DruidComboAlwaysShown()) then return end
     if C_GameRules and C_GameRules.IsPersonalResourceDisplayEnabled and not C_GameRules.IsPersonalResourceDisplayEnabled() then return end
     if not InCombatLockdown() or not nativeFrame:IsProtected() then nativeFrame:Show() end
 end
@@ -593,7 +587,7 @@ end
 function PersonalResource:UpdateDruidPowerVisibility()
     local alwaysShow = AlwaysShowDruidPower()
     if nativeFrame and PersonalResource:IsDruid() and not nativeFrame.isInEditMode then
-        nativeFrame:UpdateShownState()
+        if nativeFrame.hasBeenSetup then nativeFrame:UpdateShownState() end
         SyncNativeDruidPowerBar()
         if not InCombatLockdown() or alwaysShow then nativeDruidPowerActive = alwaysShow end
     end
@@ -603,9 +597,10 @@ end
 
 local function UpdateNativeComboLayout()
     if not NativeHasComboPoints() then return end
-    if nativeFrame.SetHideClassInfo then
-        local hide = not DruidComboAlwaysShown() and not GetCfg("SHOWCOMBOPOINTS", true)
-        if (not not nativeFrame.hideClassInfo) ~= hide then nativeFrame:SetHideClassInfo(hide) end
+    local container = nativeFrame.ClassFrameContainer
+    if container and nativeFrame.classFrame then
+        local shown = DruidComboAlwaysShown() or GetCfg("SHOWCOMBOPOINTS", true)
+        if container:IsShown() ~= shown then container:SetShown(shown) end
     end
 
     local classFrame = nativeFrame.classFrame
@@ -644,13 +639,15 @@ end
 
 local function UpdateNativeHealthColor()
     local bar = nativeFrame.healthbar
-    if not bar or not nativeFrame.GetDesiredHealthColor then return end
+    if not bar then return end
     local fraction = GetResourceFraction(UnitHealth("player"), UnitHealthMax("player"))
     if GetCfg("SMARTWARNINGCOLORS", false) and fraction and fraction < LOWHEALTHPCT then
         bar:SetStatusBarColor(1, 0.1, 0.1, 1)
     else
-        local color = nativeFrame:GetDesiredHealthColor()
-        if color then bar:SetStatusBarColor(color:GetRGB()) end
+        local _, class = UnitClass("player")
+        local color = GetCfg("USECLASSCOLOR", true) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+        color = color or PERSONAL_RESOURCE_DISPLAY_DEFAULT_HEALTH_COLOR
+        if color then bar:SetStatusBarColor(color.r, color.g, color.b) end
     end
 end
 
@@ -695,17 +692,11 @@ function PersonalResource:UpdateFrames()
         nativeLayoutPending = false
         local width = GetCfg("BARWIDTH", 200)
         local height = GetCfg("BARHEIGHT", 19)
-        if nativeFrame.SetBarWidth and nativeFrame.defaultBarWidth and nativeFrame.defaultBarWidth > 0 then
-            nativeFrame:SetBarWidth(width * 100 / nativeFrame.defaultBarWidth)
+        for _, part in ipairs({nativeFrame, nativeFrame.HealthBarsContainer, nativeFrame.PowerBar, nativeFrame.AlternatePowerBar, nativeFrame.ClassFrameContainer}) do
+            part:SetWidth(width)
         end
-        if nativeFrame.SetHealthBarHeight then nativeFrame:SetHealthBarHeight(height) end
-        if nativeFrame.SetPowerBarHeight then nativeFrame:SetPowerBarHeight(height) end
-        if nativeFrame.SetBarPadding then
-            local minimumPadding = nativeFrame.GetMinimumBarPadding and nativeFrame:GetMinimumBarPadding() or 0
-            nativeFrame:SetBarPadding(GetCfg("BARSPACING", 0) - minimumPadding)
-        end
-        if nativeFrame.SetShowClassColor and nativeFrame.healthbar then
-            nativeFrame:SetShowClassColor(GetCfg("USECLASSCOLOR", true))
+        for _, part in ipairs({nativeFrame.HealthBarsContainer, nativeFrame.PowerBar, nativeFrame.AlternatePowerBar}) do
+            part:SetHeight(height)
         end
         UpdateNativeHealthColor()
         UpdateNativeComboLayout()
@@ -1219,6 +1210,12 @@ initFrame:SetScript("OnEvent", function(self, event)
                     nativeFrame:SetHeight(nativeDruidHeight)
                 end
                 ScheduleNativeOrder()
+            end)
+        end
+        if nativeFrame.UpdateHealthColor then hooksecurefunc(nativeFrame, "UpdateHealthColor", UpdateNativeHealthColor) end
+        if nativeFrame.UpdateSystem then
+            hooksecurefunc(nativeFrame, "UpdateSystem", function()
+                C_Timer.After(0, function() PersonalResource:UpdateFrames() end)
             end)
         end
         if nativeFrame.UpdateHealth then
