@@ -887,12 +887,23 @@ end
 
 function PersonalResource:UpdatePetFrames()
     oldPetState = PersonalResource:HasPet()
-    if not oldPetState then
+    local placeholder = not oldPetState and PersonalResource:IsEditModeFrameActive(petFrame)
+    if not oldPetState and not placeholder then
         petFrame:Hide()
         return
     end
 
     EnsurePetBars()
+    if placeholder then
+        for _, template in pairs(petBarTemplates) do
+            template.statusBar:SetMinMaxValues(0, 1)
+            template.statusBar:SetValue(1)
+            template.leftText:SetText("")
+            template.rightText:SetText("")
+        end
+        petBarTemplates.HEALTH.statusBar:SetStatusBarColor(GetPetHealthColor())
+        petBarTemplates.POWER.statusBar:SetStatusBarColor(GetPetPowerColor(MANAPOWERTYPE, "MANA"))
+    end
     local width = GetCfg("PETBARWIDTH", 150)
     local height = GetCfg("PETBARHEIGHT", 14)
     local spacing = GetCfg("PETBARSPACING", 0)
@@ -900,7 +911,7 @@ function PersonalResource:UpdatePetFrames()
     local gap = spacing + overTop + overBottom
     if nativeFrame then gap = spacing end
     local maxPower = UnitPowerMax("pet")
-    local showPower = not PersonalResource:CanAccessValue(maxPower) or maxPower > 0
+    local showPower = placeholder or not PersonalResource:CanAccessValue(maxPower) or maxPower > 0
     local previous = nil
     local total = 0
     for _, key in ipairs(PersonalResource:GetPetBarOrder()) do
@@ -1054,9 +1065,9 @@ function PersonalResource:UpdateVisibility()
         playerDisplay:SetAlpha(alpha)
         if frame then frame:EnableMouse(not locked and (not PersonalResource:CanAccessValue(alpha) or alpha > 0)) end
     end
-    local petAlpha = GetVisibilityAlpha(petFrame, "pet", "PET", not petFrame:IsShown())
+    local petAlpha = GetVisibilityAlpha(petFrame, "pet", "PET", not petFrame:IsShown() or PersonalResource:IsEditModeFrameActive(petFrame))
     petFrame:SetAlpha(petAlpha)
-    petFrame:EnableMouse(not locked and (not PersonalResource:CanAccessValue(petAlpha) or petAlpha > 0))
+    petFrame:EnableMouse(not petFrame.Selection and not locked and (not PersonalResource:CanAccessValue(petAlpha) or petAlpha > 0))
     if NeedsVisibilityUpdates() then
         visibilityFrame:Show()
     else
@@ -1249,6 +1260,17 @@ initFrame:SetScript("OnEvent", function(self, event)
     if class == "DRUID" then PersonalResource:UpdateDruidPowerVisibility() end
     PersonalResource:UpdateAll()
     RestoreFramePosition(petFrame, "petFrame")
+    if nativeFrame then
+        PersonalResource:RegisterEditModeFrame(petFrame, {
+            name = PET or "Pet",
+            onEditMode = function() PersonalResource:UpdatePet() end,
+            onMoved = function(_, point, relativePoint, x, y)
+                PersonalResourceG.petFrame = PersonalResourceG.petFrame or {}
+                PersonalResourceG.petFrame.position = {point, relativePoint, x, y}
+            end
+        })
+        PersonalResource:UpdateVisibility()
+    end
 end)
 
 PersonalResource:RegisterEvent(initFrame, "PLAYER_LOGIN")
