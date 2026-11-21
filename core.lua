@@ -980,12 +980,6 @@ if C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType and En
     fullResourceCurve:SetType(Enum.LuaCurveType.Step)
     fullResourceCurve:AddPoint(0, 1)
     fullResourceCurve:AddPoint(1, 0)
-    visibilityFrame.filledCurve = C_CurveUtil.CreateCurve()
-    visibilityFrame.filledCurve:SetType(Enum.LuaCurveType.Step)
-    visibilityFrame.filledCurve:AddPoint(0, 0)
-    visibilityFrame.filledCurve:AddPoint(1, 1)
-    visibilityFrame.healthGate = CreateFrame("Frame", nil, visibilityFrame)
-    visibilityFrame.powerGate = CreateFrame("Frame", nil, visibilityFrame.healthGate)
 end
 
 local function IsHovered(target)
@@ -1033,27 +1027,23 @@ local function CombineVisibilityAlpha(first, second)
     return 1
 end
 
-function visibilityFrame:GetCurveAlpha(unit, hideHealth, hidePower)
-    self:SetAlpha(1)
-    self.healthGate:SetAlpha(1)
-    self.powerGate:SetAlpha(1)
-    if hideHealth then self.healthGate:SetAlpha(UnitHealthPercent(unit, true, self.filledCurve)) end
-    if hidePower then self.powerGate:SetAlpha(UnitPowerPercent(unit, UnitPowerType(unit), false, self.filledCurve)) end
-    return fullResourceCurve:Evaluate(self.powerGate:GetEffectiveAlpha())
-end
-
 local function GetVisibilityAlpha(target, unit, prefix, bypassFull, healthBar, primaryBar)
     local hideHealth = GetCfg(prefix .. "HIDEWHENFULLHP", false)
     local hidePower = GetCfg(prefix .. "HIDEWHENFULLPOWER", false)
     if bypassFull or (not hideHealth and not hidePower) then return 1 end
     if GetCfg(prefix .. "SHOWONHOVER", false) and IsHovered(target) then return 1 end
     if GetCfg(prefix .. "SHOWINCOMBAT", false) and UnitAffectingCombat("player") then return 1 end
-    if visibilityFrame.filledCurve and UnitHealthPercent and UnitPowerPercent then return visibilityFrame:GetCurveAlpha(unit, hideHealth, hidePower) end
     local health = 0
     if hideHealth then health = GetHealthVisibilityAlpha(unit, healthBar) end
     local power = 0
     if hidePower then power = GetPowerVisibilityAlpha(unit, primaryBar) end
+    if hideHealth and hidePower and not PersonalResource:CanAccessValue(health) and not PersonalResource:CanAccessValue(power) then return 1, health, power end
     return CombineVisibilityAlpha(health, power)
+end
+
+local function SetPartsAlpha(healthPart, powerPart, healthAlpha, powerAlpha)
+    if healthPart then healthPart:SetAlpha(healthAlpha or 1) end
+    if powerPart then powerPart:SetAlpha(powerAlpha or 1) end
 end
 
 local function NeedsVisibilityUpdates()
@@ -1069,12 +1059,18 @@ function PersonalResource:UpdateVisibility()
     if playerDisplay then
         local healthBar = nativeFrame and nativeFrame.HealthBarsContainer and nativeFrame.HealthBarsContainer.healthBar
         local primaryBar = nativeFrame and nativeFrame.PowerBar
-        local alpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode, healthBar, primaryBar)
+        local alpha, healthAlpha, powerAlpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode, healthBar, primaryBar)
         playerDisplay:SetAlpha(alpha)
+        if nativeFrame then
+            SetPartsAlpha(nativeFrame.HealthBarsContainer, nativeFrame.PowerBar, healthAlpha, powerAlpha)
+        else
+            SetPartsAlpha(hpTemplate and hpTemplate.frame, powerTemplate and powerTemplate.frame, healthAlpha, powerAlpha)
+        end
         if frame then frame:EnableMouse(not locked and (not PersonalResource:CanAccessValue(alpha) or alpha > 0)) end
     end
-    local petAlpha = GetVisibilityAlpha(petFrame, "pet", "PET", not petFrame:IsShown() or PersonalResource:IsEditModeFrameActive(petFrame))
+    local petAlpha, petHealthAlpha, petPowerAlpha = GetVisibilityAlpha(petFrame, "pet", "PET", not petFrame:IsShown() or PersonalResource:IsEditModeFrameActive(petFrame))
     petFrame:SetAlpha(petAlpha)
+    SetPartsAlpha(petBarTemplates.HEALTH and petBarTemplates.HEALTH.frame, petBarTemplates.POWER and petBarTemplates.POWER.frame, petHealthAlpha, petPowerAlpha)
     petFrame:EnableMouse(not petFrame.Selection and not locked and (not PersonalResource:CanAccessValue(petAlpha) or petAlpha > 0))
     if NeedsVisibilityUpdates() then
         visibilityFrame:Show()
