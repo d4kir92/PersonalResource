@@ -76,7 +76,10 @@ local hoverCheckboxes = {}
 local function UpdateHoverCheckbox(prefix)
     local cb = hoverCheckboxes[prefix]
     if cb == nil then return end
-    local enabled = PersonalResource:GV(PersonalResourceG, prefix .. "HIDEWHENFULLHP", false) == true or PersonalResource:GV(PersonalResourceG, prefix .. "HIDEWHENFULLPOWER", false) == true
+    local enabled = false
+    for _, key in ipairs({"HIDEWHENFULLHP", "HIDEWHENFULLPOWER", "HIDEWHENFULLENERGY", "HIDEWHENEMPTYRAGE"}) do
+        if PersonalResource:GV(PersonalResourceG, prefix .. key, false) == true then enabled = true end
+    end
     cb:SetEnabled(enabled)
     if enabled then
         cb.Label:SetTextColor(1, 0.82, 0, 1)
@@ -85,18 +88,31 @@ local function UpdateHoverCheckbox(prefix)
     end
 end
 
+local CLASSPOWERS = {
+    ENERGY = {DRUID = true, ROGUE = true, MONK = true},
+    RAGE = {DRUID = true, WARRIOR = true},
+    ONLYSPECIAL = {ROGUE = true, WARRIOR = true}
+}
+
+local function ClassHas(kind)
+    local _, class = UnitClass("player")
+    return CLASSPOWERS[kind][class] == true
+end
+
 local function AddVisibilityOptions(prefix)
+    local function UpdateHide()
+        UpdateHoverCheckbox(prefix)
+        PersonalResource:UpdateAll()
+    end
+
+    local powerDefault = PersonalResource:GV(PersonalResourceG, prefix .. "HIDEWHENFULLPOWER", false)
+    AddCategory(prefix .. "AUTOHIDE", 2)
+    AddCheckbox(prefix .. "HIDEWHENFULLHP", prefix .. "HIDEWHENFULLHP", false, UpdateHide)
+    if prefix ~= "" or not ClassHas("ONLYSPECIAL") then AddCheckbox(prefix .. "HIDEWHENFULLPOWER", prefix .. "HIDEWHENFULLPOWER", false, UpdateHide) end
+    if prefix == "" and ClassHas("ENERGY") then AddCheckbox("HIDEWHENFULLENERGY", "HIDEWHENFULLENERGY", powerDefault, UpdateHide) end
+    if prefix == "" and ClassHas("RAGE") then AddCheckbox("HIDEWHENEMPTYRAGE", "HIDEWHENEMPTYRAGE", powerDefault, UpdateHide) end
+    AddCategory(prefix .. "SHOWANYWAY", 2)
     hoverCheckboxes[prefix] = AddCheckbox(prefix .. "SHOWONHOVER", prefix .. "SHOWONHOVER", false, function() PersonalResource:UpdateAll() end)
-    AddCheckbox(prefix .. "HIDEWHENFULLHP", prefix .. "HIDEWHENFULLHP", false, function()
-        UpdateHoverCheckbox(prefix)
-        PersonalResource:UpdateAll()
-    end)
-
-    AddCheckbox(prefix .. "HIDEWHENFULLPOWER", prefix .. "HIDEWHENFULLPOWER", false, function()
-        UpdateHoverCheckbox(prefix)
-        PersonalResource:UpdateAll()
-    end)
-
     AddCheckbox(prefix .. "SHOWINCOMBAT", prefix .. "SHOWINCOMBAT", false, function() PersonalResource:UpdateAll() end)
 end
 
@@ -164,9 +180,9 @@ function PersonalResource:InitSettings()
     AddSlider("WIDTH", "BARWIDTH", 200, 40, 400, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("HEIGHT", "BARHEIGHT", 19, 4, 64, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("SPACING", "BARSPACING", 0, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
-    AddCategory("VISIBILITY", 2)
     AddVisibilityOptions("")
     if PersonalResource:IsDruid() then
+        AddCategory("DRUID", 2)
         local function UpdateDruidBars()
             PersonalResource:UpdateDruidPowerVisibility()
             PersonalResource:UpdateAll()
@@ -203,7 +219,6 @@ function PersonalResource:InitSettings()
     AddSlider("PETWIDTH", "PETBARWIDTH", 150, 40, 400, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("PETHEIGHT", "PETBARHEIGHT", 14, 4, 64, 1, 0, function() PersonalResource:UpdateAll() end)
     AddSlider("PETSPACING", "PETBARSPACING", 0, 0, 32, 1, 0, function() PersonalResource:UpdateAll() end)
-    AddCategory("PETVISIBILITY", 2)
     AddVisibilityOptions("PET")
     AddCategory("PETBARORDER", 2)
     AddBarOrder("PETBARSLOT", "PETBARORDER", PersonalResource:GetPetBarOrder())

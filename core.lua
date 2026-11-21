@@ -14,7 +14,7 @@ local DRUIDBARKEYS = {"COMBO", "ENERGY", "RAGE", "MANA", "POWER", "HEALTH"}
 local DRUIDPOWERTYPES = {MANA = MANAPOWERTYPE, ENERGY = ENERGYPOWERTYPE, RAGE = RAGEPOWERTYPE}
 local druidBars = {}
 local PETBARKEYS = {"HEALTH", "POWER"}
-local HIDEWHENFULLKEYS = {"HIDEWHENFULLHP", "HIDEWHENFULLPOWER", "PETHIDEWHENFULLHP", "PETHIDEWHENFULLPOWER"}
+local HIDEWHENFULLKEYS = {"HIDEWHENFULLHP", "HIDEWHENFULLPOWER", "HIDEWHENFULLENERGY", "HIDEWHENEMPTYRAGE", "PETHIDEWHENFULLHP", "PETHIDEWHENFULLPOWER"}
 local function GetCfg(key, default)
     PersonalResourceG = PersonalResourceG or {}
     return PersonalResource:GV(PersonalResourceG, key, default)
@@ -974,12 +974,16 @@ end
 local visibilityFrame = CreateFrame("Frame")
 local visibilityElapsed = 0
 visibilityFrame:Hide()
-local fullResourceCurve
+local fullResourceCurve, emptyResourceCurve
 if C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType and Enum.LuaCurveType.Step then
     fullResourceCurve = C_CurveUtil.CreateCurve()
     fullResourceCurve:SetType(Enum.LuaCurveType.Step)
     fullResourceCurve:AddPoint(0, 1)
     fullResourceCurve:AddPoint(1, 0)
+    emptyResourceCurve = C_CurveUtil.CreateCurve()
+    emptyResourceCurve:SetType(Enum.LuaCurveType.Step)
+    emptyResourceCurve:AddPoint(0, 0)
+    emptyResourceCurve:AddPoint(0.001, 1)
 end
 
 local function IsHovered(target)
@@ -988,15 +992,16 @@ local function IsHovered(target)
     return false
 end
 
-local function GetFullResourceAlpha(current, maximum)
+local function GetFullResourceAlpha(current, maximum, hideWhenEmpty)
     if not PersonalResource:CanAccessValues(current, maximum) then return nil end
+    if hideWhenEmpty then return (maximum <= 0 or current <= 0) and 0 or 1 end
     return (maximum <= 0 or current >= maximum) and 0 or 1
 end
 
-local function GetBarFullResourceAlpha(bar)
+local function GetBarFullResourceAlpha(bar, hideWhenEmpty)
     if not bar then return nil end
     local _, maximum = bar:GetMinMaxValues()
-    return GetFullResourceAlpha(bar:GetValue(), maximum)
+    return GetFullResourceAlpha(bar:GetValue(), maximum, hideWhenEmpty)
 end
 
 local function GetHealthVisibilityAlpha(unit, bar)
@@ -1008,50 +1013,107 @@ local function GetHealthVisibilityAlpha(unit, bar)
     return 1
 end
 
-local function GetPowerVisibilityAlpha(unit, bar)
-    local barAlpha = GetBarFullResourceAlpha(bar)
+local function GetPowerVisibilityAlpha(unit, powerType, bar)
+    local hideWhenEmpty = powerType == RAGEPOWERTYPE
+    local barAlpha = GetBarFullResourceAlpha(bar, hideWhenEmpty)
     if barAlpha ~= nil then return barAlpha end
-    local powerType = UnitPowerType(unit)
-    local alpha = GetFullResourceAlpha(UnitPower(unit, powerType), UnitPowerMax(unit, powerType))
+    local alpha = GetFullResourceAlpha(UnitPower(unit, powerType), UnitPowerMax(unit, powerType), hideWhenEmpty)
     if alpha ~= nil then return alpha end
-    if fullResourceCurve and UnitPowerPercent then return UnitPowerPercent(unit, powerType, false, fullResourceCurve) end
+    local curve = hideWhenEmpty and emptyResourceCurve or fullResourceCurve
+    if curve and UnitPowerPercent then return UnitPowerPercent(unit, powerType, false, curve) end
     return 1
 end
 
-local function CombineVisibilityAlpha(first, second)
-    if PersonalResource:CanAccessValue(first) then
-        if first == 0 then return second end
-        return 1
+local function IsPowerHideEnabled(prefix, powerType)
+    if prefix == "" and powerType == ENERGYPOWERTYPE then return GetCfg("HIDEWHENFULLENERGY", GetCfg("HIDEWHENFULLPOWER", false)) end
+    if prefix == "" and powerType == RAGEPOWERTYPE then return GetCfg("HIDEWHENEMPTYRAGE", GetCfg("HIDEWHENFULLPOWER", false)) end
+    return GetCfg(prefix .. "HIDEWHENFULLPOWER", false)
+end
+
+local function AddVisibilityPart(parts, part, enabled, unit, powerType, bar)
+    if not part then return end
+    parts[#parts + 1] = {frame = part, enabled = enabled, unit = unit, powerType = powerType, bar = bar}
+end
+
+local function GetPartVisibilityAlpha(part)
+    if part.powerType == nil then return GetHealthVisibilityAlpha(part.unit, part.bar) end
+    return GetPowerVisibilityAlpha(part.unit, part.powerType, part.bar)
+end
+
+local function ApplyVisibility(target, prefix, parts, bypass)
+    local active = false
+    if not bypass then
+        for _, part in ipairs(parts) do
+            if part.enabled then active = true end
+        end
     end
-    if PersonalResource:CanAccessValue(second) and second == 0 then return first end
-    return 1
+    if active and GetCfg(prefix .. "SHOWONHOVER", false) and IsHovered(target) then active = false end
+    if active and GetCfg(prefix .. "SHOWINCOMBAT", false) and UnitAffectingCombat("player") then active = false end
+    local alpha = 1
+    local split = false
+    if active then
+        local visible = false
+        local secretCount = 0
+        local lastSecret
+        for _, part in ipairs(parts) do
+            if part.enabled then
+                part.alpha = GetPartVisibilityAlpha(part)
+                if not PersonalResource:CanAccessValue(part.alpha) then
+                    secretCount = secretCount + 1
+                    lastSecret = part.alpha
+                elseif part.alpha ~= 0 then
+                    visible = true
+                end
+            end
+        end
+        if not visible then
+            if secretCount == 0 then
+                alpha = 0
+            elseif secretCount == 1 then
+                alpha = lastSecret
+            else
+                split = true
+            end
+        end
+    end
+    target:SetAlpha(alpha)
+    for _, part in ipairs(parts) do
+        local partAlpha = 1
+        if split and part.enabled then partAlpha = part.alpha end
+        part.frame:SetAlpha(partAlpha)
+    end
+    return alpha
 end
 
-local function GetVisibilityAlpha(target, unit, prefix, bypassFull, healthBar, primaryBar)
-    local hideHealth = GetCfg(prefix .. "HIDEWHENFULLHP", false)
-    local hidePower = GetCfg(prefix .. "HIDEWHENFULLPOWER", false)
-    if bypassFull or (not hideHealth and not hidePower) then return 1 end
-    if GetCfg(prefix .. "SHOWONHOVER", false) and IsHovered(target) then return 1 end
-    if GetCfg(prefix .. "SHOWINCOMBAT", false) and UnitAffectingCombat("player") then return 1 end
-    local health = 0
-    if hideHealth then health = GetHealthVisibilityAlpha(unit, healthBar) end
-    local power = 0
-    if hidePower then power = GetPowerVisibilityAlpha(unit, primaryBar) end
-    if hideHealth and hidePower and not PersonalResource:CanAccessValue(health) and not PersonalResource:CanAccessValue(power) then return 1, health, power end
-    return CombineVisibilityAlpha(health, power)
+local function GetPlayerVisibilityParts()
+    local parts = {}
+    local powerType = UnitPowerType("player")
+    local hideHealth = GetCfg("HIDEWHENFULLHP", false)
+    if nativeFrame then
+        local health = nativeFrame.HealthBarsContainer
+        AddVisibilityPart(parts, health, hideHealth, "player", nil, health and health.healthBar)
+        local power = nativeFrame.PowerBar
+        if power and power:IsShown() then AddVisibilityPart(parts, power, IsPowerHideEnabled("", powerType), "player", powerType, power) end
+        local alternate = nativeFrame.AlternatePowerBar
+        if alternate and alternate:IsShown() and powerType ~= MANAPOWERTYPE then AddVisibilityPart(parts, alternate, IsPowerHideEnabled("", MANAPOWERTYPE), "player", MANAPOWERTYPE) end
+    else
+        AddVisibilityPart(parts, hpTemplate and hpTemplate.frame, hideHealth, "player")
+        AddVisibilityPart(parts, powerTemplate and powerTemplate.frame, IsPowerHideEnabled("", powerType), "player", powerType)
+        if manaTemplate and manaTemplate.frame:IsShown() then AddVisibilityPart(parts, manaTemplate.frame, IsPowerHideEnabled("", MANAPOWERTYPE), "player", MANAPOWERTYPE) end
+    end
+    for key, bar in pairs(druidBars) do
+        local barType = DRUIDPOWERTYPES[key]
+        if bar.frame:IsShown() then AddVisibilityPart(parts, bar.frame, IsPowerHideEnabled("", barType), "player", barType) end
+    end
+    return parts
 end
 
-local function SetPartsAlpha(healthPart, powerPart, healthAlpha, powerAlpha)
-    if healthPart then healthPart:SetAlpha(healthAlpha or 1) end
-    if powerPart then powerPart:SetAlpha(powerAlpha or 1) end
-end
-
-local function GetManaVisibilityAlpha(powerAlpha)
-    if powerAlpha == nil then return 1 end
-    local alpha = GetFullResourceAlpha(UnitPower("player", MANAPOWERTYPE), UnitPowerMax("player", MANAPOWERTYPE))
-    if alpha ~= nil then return alpha end
-    if fullResourceCurve and UnitPowerPercent then return UnitPowerPercent("player", MANAPOWERTYPE, false, fullResourceCurve) end
-    return 1
+local function GetPetVisibilityParts()
+    local parts = {}
+    AddVisibilityPart(parts, petBarTemplates.HEALTH and petBarTemplates.HEALTH.frame, GetCfg("PETHIDEWHENFULLHP", false), "pet")
+    local powerType = UnitPowerType("pet")
+    AddVisibilityPart(parts, petBarTemplates.POWER and petBarTemplates.POWER.frame, IsPowerHideEnabled("PET", powerType), "pet", powerType)
+    return parts
 end
 
 local function NeedsVisibilityUpdates()
@@ -1065,24 +1127,10 @@ function PersonalResource:UpdateVisibility()
     local locked = GetCfg("LOCKED", false)
     local playerDisplay = nativeFrame or frame
     if playerDisplay then
-        local healthBar = nativeFrame and nativeFrame.HealthBarsContainer and nativeFrame.HealthBarsContainer.healthBar
-        local primaryBar = nativeFrame and nativeFrame.PowerBar
-        local alpha, healthAlpha, powerAlpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode, healthBar, primaryBar)
-        playerDisplay:SetAlpha(alpha)
-        local manaAlpha = GetManaVisibilityAlpha(powerAlpha)
-        if nativeFrame then
-            SetPartsAlpha(nativeFrame.HealthBarsContainer, nativeFrame.PowerBar, healthAlpha, powerAlpha)
-            local alternate = nativeFrame.AlternatePowerBar
-            if alternate and PersonalResource:IsDruid() and UnitPowerType("player") ~= MANAPOWERTYPE then alternate:SetAlpha(manaAlpha) end
-        else
-            SetPartsAlpha(hpTemplate and hpTemplate.frame, powerTemplate and powerTemplate.frame, healthAlpha, powerAlpha)
-            if manaTemplate and manaTemplate.frame then manaTemplate.frame:SetAlpha(manaAlpha) end
-        end
+        local alpha = ApplyVisibility(playerDisplay, "", GetPlayerVisibilityParts(), playerDisplay.isInEditMode)
         if frame then frame:EnableMouse(not locked and (not PersonalResource:CanAccessValue(alpha) or alpha > 0)) end
     end
-    local petAlpha, petHealthAlpha, petPowerAlpha = GetVisibilityAlpha(petFrame, "pet", "PET", not petFrame:IsShown() or PersonalResource:IsEditModeFrameActive(petFrame))
-    petFrame:SetAlpha(petAlpha)
-    SetPartsAlpha(petBarTemplates.HEALTH and petBarTemplates.HEALTH.frame, petBarTemplates.POWER and petBarTemplates.POWER.frame, petHealthAlpha, petPowerAlpha)
+    local petAlpha = ApplyVisibility(petFrame, "PET", GetPetVisibilityParts(), not petFrame:IsShown() or PersonalResource:IsEditModeFrameActive(petFrame))
     petFrame:EnableMouse(not petFrame.Selection and not locked and (not PersonalResource:CanAccessValue(petAlpha) or petAlpha > 0))
     if NeedsVisibilityUpdates() then
         visibilityFrame:Show()
