@@ -1046,6 +1046,14 @@ local function SetPartsAlpha(healthPart, powerPart, healthAlpha, powerAlpha)
     if powerPart then powerPart:SetAlpha(powerAlpha or 1) end
 end
 
+local function GetManaVisibilityAlpha(powerAlpha)
+    if powerAlpha == nil then return 1 end
+    local alpha = GetFullResourceAlpha(UnitPower("player", MANAPOWERTYPE), UnitPowerMax("player", MANAPOWERTYPE))
+    if alpha ~= nil then return alpha end
+    if fullResourceCurve and UnitPowerPercent then return UnitPowerPercent("player", MANAPOWERTYPE, false, fullResourceCurve) end
+    return 1
+end
+
 local function NeedsVisibilityUpdates()
     for i = 1, #HIDEWHENFULLKEYS do
         if GetCfg(HIDEWHENFULLKEYS[i], false) then return true end
@@ -1061,10 +1069,14 @@ function PersonalResource:UpdateVisibility()
         local primaryBar = nativeFrame and nativeFrame.PowerBar
         local alpha, healthAlpha, powerAlpha = GetVisibilityAlpha(playerDisplay, "player", "", playerDisplay.isInEditMode, healthBar, primaryBar)
         playerDisplay:SetAlpha(alpha)
+        local manaAlpha = GetManaVisibilityAlpha(powerAlpha)
         if nativeFrame then
             SetPartsAlpha(nativeFrame.HealthBarsContainer, nativeFrame.PowerBar, healthAlpha, powerAlpha)
+            local alternate = nativeFrame.AlternatePowerBar
+            if alternate and PersonalResource:IsDruid() and UnitPowerType("player") ~= MANAPOWERTYPE then alternate:SetAlpha(manaAlpha) end
         else
             SetPartsAlpha(hpTemplate and hpTemplate.frame, powerTemplate and powerTemplate.frame, healthAlpha, powerAlpha)
+            if manaTemplate and manaTemplate.frame then manaTemplate.frame:SetAlpha(manaAlpha) end
         end
         if frame then frame:EnableMouse(not locked and (not PersonalResource:CanAccessValue(alpha) or alpha > 0)) end
     end
