@@ -1,8 +1,101 @@
 -- By D4KiR
 local _, PersonalResource = ...
 local prset = nil
-local DEFAULT_WIDTH = 420
+local DEFAULT_WIDTH = 600
 local DEFAULT_HEIGHT = 400
+local ADDED = "2026-11-21"
+local LANGUAGES = {{"English", "enUS"}, {"Deutsch", "deDE"}, {"Español (España)", "esES"}, {"Español (México)", "esMX"}, {"Français", "frFR"}, {"Italiano", "itIT"}, {"한국어", "koKR"}, {"Português (Brasil)", "ptBR"}, {"Русский", "ruRU"}, {"简体中文", "zhCN"}, {"繁體中文", "zhTW"}}
+local languageNames = {}
+for _, info in ipairs(LANGUAGES) do
+    languageNames[info[2]] = info[1]
+end
+
+function PersonalResource:GetLanguage()
+    local lang = type(PersonalResourceG) == "table" and PersonalResourceG["LANGUAGE"] or nil
+    if lang ~= nil and languageNames[lang] ~= nil then return lang end
+    if languageNames[GetLocale()] ~= nil then return GetLocale() end
+    return "enUS"
+end
+
+PersonalResource.LibTrans = PersonalResource.Trans
+function PersonalResource:Trans(key, lang, ...)
+    return PersonalResource.LibTrans(self, key, lang or PersonalResource:GetLanguage(), ...)
+end
+
+function PersonalResource:SetLanguage(lang)
+    if languageNames[lang] == nil or lang == PersonalResource:GetLanguage() then return end
+    PersonalResourceG = PersonalResourceG or {}
+    if lang == GetLocale() then
+        PersonalResourceG["LANGUAGE"] = nil
+    else
+        PersonalResourceG["LANGUAGE"] = lang
+    end
+
+    if prset ~= nil then
+        prset:RefreshLanguage()
+        if prset.prRefreshLanguageButton then prset.prRefreshLanguageButton() end
+    end
+
+    if PersonalResource.WhatsNew then PersonalResource.WhatsNew:RefreshLanguage() end
+end
+
+local function LanguageMenu(_, root)
+    root:CreateTitle(PersonalResource:Trans("LID_LANGUAGE"))
+    for _, info in ipairs(LANGUAGES) do
+        local lang = info[2]
+        root:CreateRadio(format("%s (%s)", info[1], lang), function() return PersonalResource:GetLanguage() == lang end, function() PersonalResource:SetLanguage(lang) end)
+    end
+end
+
+function PersonalResource:AddLanguageButton(win)
+    local parent = win.titleBar or win
+    local button
+    if PersonalResource:GetWoWBuild() == "RETAIL" and PersonalResource:CheckTemplates("WowStyle1DropdownTemplate") then
+        button = CreateFrame("DropdownButton", nil, parent, "WowStyle1DropdownTemplate")
+        button:SetScale(0.8)
+        button:SetSize(162.5, 25)
+        button:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, -1.25)
+        button:SetSelectionText(function() return languageNames[PersonalResource:GetLanguage()] end)
+        button:SetTooltip(function(tooltip) tooltip:SetText(PersonalResource:Trans("LID_LANGUAGE")) end)
+        button:SetupMenu(LanguageMenu)
+    else
+        button = PersonalResource:CreateButton(nil, parent)
+        button:SetSize(130, 20)
+        button:SetPoint("TOPLEFT", parent, "TOPLEFT", 7, -2)
+        button.Arrow = button:CreateTexture(nil, "OVERLAY")
+        button.Arrow:SetTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
+        button.Arrow:SetSize(16, 16)
+        button.Arrow:SetPoint("RIGHT", button, "RIGHT", -2, 0)
+        button:SetScript("OnClick", function(sel)
+            if MenuUtil and MenuUtil.CreateContextMenu then
+                MenuUtil.CreateContextMenu(sel, LanguageMenu)
+            else
+                local current = 1
+                for index, info in ipairs(LANGUAGES) do
+                    if info[2] == PersonalResource:GetLanguage() then current = index end
+                end
+
+                PersonalResource:SetLanguage(LANGUAGES[current % #LANGUAGES + 1][2])
+            end
+        end)
+
+        button:SetScript("OnEnter", function(sel)
+            GameTooltip:SetOwner(sel, "ANCHOR_RIGHT")
+            GameTooltip:SetText(PersonalResource:Trans("LID_LANGUAGE"))
+            GameTooltip:Show()
+        end)
+
+        button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    end
+
+    local function RefreshButton()
+        button:SetText(languageNames[PersonalResource:GetLanguage()])
+    end
+
+    RefreshButton()
+    win.Language = button
+    return RefreshButton
+end
 local BARLABELS = {
     HEALTH = "LID_HEALTH",
     POWER = "LID_POWER",
@@ -44,10 +137,12 @@ local function AddCategory(key, level)
     })
 end
 
-local function AddCheckbox(key, dbkey, default, func)
+local function AddCheckbox(key, dbkey, default, func, added, tooltip)
     return prset:AddCheckbox({
         ["label"] = "LID_" .. key,
         ["search"] = key,
+        ["added"] = added,
+        ["tooltip"] = tooltip,
         ["value"] = PersonalResource:GV(PersonalResourceG, dbkey, default),
         ["func"] = function(value)
             PersonalResource:SV(PersonalResourceG, dbkey, value)
@@ -109,11 +204,11 @@ local function AddVisibilityOptions(prefix)
     AddCategory(prefix .. "AUTOHIDE", 2)
     AddCheckbox(prefix .. "HIDEWHENFULLHP", prefix .. "HIDEWHENFULLHP", false, UpdateHide)
     if prefix ~= "" or not ClassHas("ONLYSPECIAL") then AddCheckbox(prefix .. "HIDEWHENFULLPOWER", prefix .. "HIDEWHENFULLPOWER", false, UpdateHide) end
-    if prefix == "" and ClassHas("ENERGY") then AddCheckbox("HIDEWHENFULLENERGY", "HIDEWHENFULLENERGY", powerDefault, UpdateHide) end
-    if prefix == "" and ClassHas("RAGE") then AddCheckbox("HIDEWHENEMPTYRAGE", "HIDEWHENEMPTYRAGE", powerDefault, UpdateHide) end
+    if prefix == "" and ClassHas("ENERGY") then AddCheckbox("HIDEWHENFULLENERGY", "HIDEWHENFULLENERGY", powerDefault, UpdateHide, ADDED) end
+    if prefix == "" and ClassHas("RAGE") then AddCheckbox("HIDEWHENEMPTYRAGE", "HIDEWHENEMPTYRAGE", powerDefault, UpdateHide, ADDED) end
     AddCategory(prefix .. "SHOWANYWAY", 2)
     hoverCheckboxes[prefix] = AddCheckbox(prefix .. "SHOWONHOVER", prefix .. "SHOWONHOVER", false, function() PersonalResource:UpdateAll() end)
-    AddCheckbox(prefix .. "SHOWINCOMBAT", prefix .. "SHOWINCOMBAT", false, function() PersonalResource:UpdateAll() end)
+    AddCheckbox(prefix .. "SHOWINCOMBAT", prefix .. "SHOWINCOMBAT", false, function() PersonalResource:UpdateAll() end, ADDED)
 end
 
 local function AddBarOrder(prefix, category, order)
@@ -151,8 +246,9 @@ function PersonalResource:InitSettings()
         ["pTab"] = {"CENTER"},
         ["width"] = PersonalResource:GV(PersonalResourceG, "WINDOWWIDTH", DEFAULT_WIDTH),
         ["height"] = PersonalResource:GV(PersonalResourceG, "WINDOWHEIGHT", DEFAULT_HEIGHT),
-        ["minWidth"] = 360,
+        ["minWidth"] = 460,
         ["minHeight"] = 240,
+        ["navigation"] = true,
         ["onResize"] = function(width, height)
             PersonalResource:SV(PersonalResourceG, "WINDOWWIDTH", width)
             PersonalResource:SV(PersonalResourceG, "WINDOWHEIGHT", height)
@@ -162,9 +258,21 @@ function PersonalResource:InitSettings()
         ["title"] = format("|T%s:16:16:0:0|t PersonalResource v%s", PersonalResource:GetAddonIcon(), PersonalResource:GetVersion())
     })
 
+    prset.prRefreshLanguageButton = PersonalResource:AddLanguageButton(prset)
+    PersonalResourceG["WHATSNEW"] = PersonalResourceG["WHATSNEW"] or {}
+    PersonalResource.WhatsNew = PersonalResource:CreateUIWhatsNew({
+        ["name"] = "PersonalResourceWhatsNew",
+        ["title"] = format("|T%s:16:16:0:0|t PersonalResource v%s", PersonalResource:GetAddonIcon(), PersonalResource:GetVersion()),
+        ["db"] = PersonalResourceG["WHATSNEW"],
+        ["since"] = ADDED,
+        ["getSettings"] = function() return prset end,
+        ["addLanguageButton"] = function(win) return PersonalResource:AddLanguageButton(win) end
+    })
+
     prset:SuspendLayout()
     prset:AddSearch()
     AddCategory("GENERAL")
+    PersonalResource.WhatsNew:AddSettingsCheckbox(prset, ADDED)
     AddCheckbox("MMBTN", "MMBTN", PersonalResource:GetWoWBuild() ~= "RETAIL", function(value)
         if value then
             PersonalResource:ShowMMBtn("PersonalResource")
@@ -233,8 +341,9 @@ function PersonalResource:InitSettings()
     AddCheckbox("SHOWPETPOWERPERCENTAGE", "SHOWPETPOWERPERCENTAGE", true, function() PersonalResource:UpdateAll() end)
     AddCategory("COLORS")
     AddCheckbox("USECLASSCOLOR", "USECLASSCOLOR", true, function() PersonalResource:UpdateAll() end)
-    AddCheckbox("SMARTWARNINGCOLORS", "SMARTWARNINGCOLORS", false, function() PersonalResource:UpdateAll() end)
+    AddCheckbox("SMARTWARNINGCOLORS", "SMARTWARNINGCOLORS", false, function() PersonalResource:UpdateAll() end, nil, "LID_SMARTWARNINGCOLORSTOOLTIP")
     prset:ResumeLayout()
+    C_Timer.After(3, function() PersonalResource.WhatsNew:ShowIfNew() end)
     UpdateHoverCheckbox("")
     UpdateHoverCheckbox("PET")
     PersonalResource:CreateMinimapButton({

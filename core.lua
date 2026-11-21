@@ -637,18 +637,36 @@ local function UpdateNativeComboLayout()
     end
 end
 
+local warningCurves = {}
+function PersonalResource:SetHealthBarColor(bar, unit, fraction, r, g, b)
+    if GetCfg("SMARTWARNINGCOLORS", false) then
+        if fraction then
+            if fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
+        elseif UnitHealthPercent and C_CurveUtil and C_CurveUtil.CreateColorCurve and CreateColor and Enum and Enum.LuaCurveType then
+            local key = format("%.3f:%.3f:%.3f", r, g, b)
+            local curve = warningCurves[key]
+            if not curve then
+                curve = C_CurveUtil.CreateColorCurve()
+                curve:SetType(Enum.LuaCurveType.Step)
+                curve:AddPoint(0, CreateColor(1, 0.1, 0.1, 1))
+                curve:AddPoint(LOWHEALTHPCT, CreateColor(r, g, b, 1))
+                warningCurves[key] = curve
+            end
+            bar:SetStatusBarColor(UnitHealthPercent(unit, false, curve):GetRGBA())
+            return
+        end
+    end
+    bar:SetStatusBarColor(r, g, b, 1)
+end
+
 local function UpdateNativeHealthColor()
     local bar = nativeFrame.healthbar
     if not bar then return end
-    local fraction = GetResourceFraction(UnitHealth("player"), UnitHealthMax("player"))
-    if GetCfg("SMARTWARNINGCOLORS", false) and fraction and fraction < LOWHEALTHPCT then
-        bar:SetStatusBarColor(1, 0.1, 0.1, 1)
-    else
-        local _, class = UnitClass("player")
-        local color = GetCfg("USECLASSCOLOR", true) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-        color = color or PERSONAL_RESOURCE_DISPLAY_DEFAULT_HEALTH_COLOR
-        if color then bar:SetStatusBarColor(color.r, color.g, color.b) end
-    end
+    local _, class = UnitClass("player")
+    local color = GetCfg("USECLASSCOLOR", true) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+    color = color or PERSONAL_RESOURCE_DISPLAY_DEFAULT_HEALTH_COLOR
+    if not color then return end
+    PersonalResource:SetHealthBarColor(bar, "player", GetResourceFraction(UnitHealth("player"), UnitHealthMax("player")), color.r, color.g, color.b)
 end
 
 local function UpdateNativeText(bar, kind)
@@ -803,8 +821,7 @@ function PersonalResource:UpdateHealth()
             end
         end
 
-        if GetCfg("SMARTWARNINGCOLORS", false) and fraction and fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
-        hpBar:SetStatusBarColor(r, g, b, 1.0)
+        PersonalResource:SetHealthBarColor(hpBar, unit, fraction, r, g, b)
         local showPercent, percent = GetHealthTextPercent(unit, GetCfg("SHOWHEALTHPERCENTAGE", true), fraction)
         SetBarTexts(hpTemplate, showPercent, percent, GetCfg("SHOWHEALTHVALUE", true), GetCfg("SHOWMAXHEALTHVALUE", false), hp, maxHP)
     end
@@ -941,8 +958,7 @@ function PersonalResource:UpdatePetHealth()
     bar:SetValue(hp)
     local fraction = GetResourceFraction(hp, maxHP)
     local r, g, b = GetPetHealthColor()
-    if GetCfg("SMARTWARNINGCOLORS", false) and fraction and fraction < LOWHEALTHPCT then r, g, b = 1, 0.1, 0.1 end
-    bar:SetStatusBarColor(r, g, b, 1.0)
+    PersonalResource:SetHealthBarColor(bar, unit, fraction, r, g, b)
     local showPercent, percent = GetHealthTextPercent(unit, GetCfg("SHOWPETHEALTHPERCENTAGE", true), fraction)
     SetBarTexts(template,showPercent, percent, GetCfg("SHOWPETHEALTHVALUE", true), GetCfg("SHOWPETMAXHEALTHVALUE", false), hp, maxHP)
 end
