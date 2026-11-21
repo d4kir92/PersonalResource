@@ -980,6 +980,12 @@ if C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType and En
     fullResourceCurve:SetType(Enum.LuaCurveType.Step)
     fullResourceCurve:AddPoint(0, 1)
     fullResourceCurve:AddPoint(1, 0)
+    visibilityFrame.filledCurve = C_CurveUtil.CreateCurve()
+    visibilityFrame.filledCurve:SetType(Enum.LuaCurveType.Step)
+    visibilityFrame.filledCurve:AddPoint(0, 0)
+    visibilityFrame.filledCurve:AddPoint(1, 1)
+    visibilityFrame.healthGate = CreateFrame("Frame", nil, visibilityFrame)
+    visibilityFrame.powerGate = CreateFrame("Frame", nil, visibilityFrame.healthGate)
 end
 
 local function IsHovered(target)
@@ -1027,11 +1033,22 @@ local function CombineVisibilityAlpha(first, second)
     return 1
 end
 
+function visibilityFrame:GetCurveAlpha(unit, hideHealth, hidePower)
+    self:SetAlpha(1)
+    self.healthGate:SetAlpha(1)
+    self.powerGate:SetAlpha(1)
+    if hideHealth then self.healthGate:SetAlpha(UnitHealthPercent(unit, true, self.filledCurve)) end
+    if hidePower then self.powerGate:SetAlpha(UnitPowerPercent(unit, UnitPowerType(unit), false, self.filledCurve)) end
+    return fullResourceCurve:Evaluate(self.powerGate:GetEffectiveAlpha())
+end
+
 local function GetVisibilityAlpha(target, unit, prefix, bypassFull, healthBar, primaryBar)
     local hideHealth = GetCfg(prefix .. "HIDEWHENFULLHP", false)
     local hidePower = GetCfg(prefix .. "HIDEWHENFULLPOWER", false)
     if bypassFull or (not hideHealth and not hidePower) then return 1 end
     if GetCfg(prefix .. "SHOWONHOVER", false) and IsHovered(target) then return 1 end
+    if GetCfg(prefix .. "SHOWINCOMBAT", false) and UnitAffectingCombat("player") then return 1 end
+    if visibilityFrame.filledCurve and UnitHealthPercent and UnitPowerPercent then return visibilityFrame:GetCurveAlpha(unit, hideHealth, hidePower) end
     local health = 0
     if hideHealth then health = GetHealthVisibilityAlpha(unit, healthBar) end
     local power = 0

@@ -96,6 +96,8 @@ local function AddVisibilityOptions(prefix)
         UpdateHoverCheckbox(prefix)
         PersonalResource:UpdateAll()
     end)
+
+    AddCheckbox(prefix .. "SHOWINCOMBAT", prefix .. "SHOWINCOMBAT", false, function() PersonalResource:UpdateAll() end)
 end
 
 local function AddBarOrder(prefix, category, order)
